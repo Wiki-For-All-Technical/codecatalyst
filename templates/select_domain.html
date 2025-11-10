@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Select Source</h2>
+<form method="POST" action="{{ url_for('gallery.fetch_images') }}">
+    <select name="domain">
+        <option value="photos">Google Photos</option>
+        <option value="drive">Google Drive</option>
+    </select>
+    <button type="submit">Fetch Images</button>
+</form>
+{% endblock %}
+

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Add Metadata</h2>
+<form method="GET" action="{{ url_for('upload.wiki_login') }}">
+    {% for img in images %}
+        <div class="metadata-item">
+            <img src="{{ img }}" alt="Image">
+            <input type="text" name="title_{{ loop.index }}" placeholder="Title">
+            <input type="text" name="desc_{{ loop.index }}" placeholder="Description">
+        </div>
+    {% endfor %}
+    <button type="submit">Login to Wikimedia & Upload</button>
+</form>
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Fetched Images</h2>
+<form method="POST" action="{{ url_for('upload.metadata') }}">
+    {% for img in images %}
+        <div class="image-container">
+            <img src="{{ img }}" loading="lazy" alt="Gallery Image">
+            <br>
+            <input type="checkbox" name="selected_images" value="{{ img }}">
+        </div>
+    {% endfor %}
+    <button type="submit">Next</button>
+</form>
+{% endblock %}
