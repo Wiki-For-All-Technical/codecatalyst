@@ -50,15 +50,7 @@ def callback():
         return redirect(url_for("main.google_login"))
 
     creds = flow.credentials
-    session["credentials"] = {
-        "token": creds.token,
-        "refresh_token": creds.refresh_token,
-        "token_uri": creds.token_uri,
-        "client_id": creds.client_id,
-        "client_secret": creds.client_secret,
-        "scopes": creds.scopes,
-        "expiry": creds.expiry.isoformat() if creds.expiry else None,
-    }
+    session["credentials"] = creds_to_dict(creds)
     flash("Google login successful")
     return redirect(url_for("gallery.select_domain"))
 
@@ -80,33 +72,25 @@ def list_google_photos(max_items=50):
         return None, str(e)
 # ...existing code...
 
-from datetime import datetime, timezone
+def creds_to_dict(credentials):
+    return {
+        'token': credentials.token,
+        'refresh_token': credentials.refresh_token,
+        'token_uri': credentials.token_uri,
+        'client_id': credentials.client_id,
+        'client_secret': credentials.client_secret,
+        'scopes': credentials.scopes
+    }
 
 def get_credentials():
     if "credentials" not in session:
         return None
     
     creds_data = session["credentials"]
-    
-    # Reconstruct Credentials object from session data
-    creds = Credentials(
-        token=creds_data["token"],
-        refresh_token=creds_data.get("refresh_token"), # Use .get for safety
-        token_uri=creds_data["token_uri"],
-        client_id=creds_data["client_id"],
-        client_secret=creds_data["client_secret"],
-        scopes=creds_data["scopes"],
-        # Convert expiry string back to a naive datetime object representing UTC.
-        # The google-auth library expects a naive datetime for comparison.
-        expiry=(datetime.fromisoformat(creds_data["expiry"].replace("Z", ""))
-                if creds_data.get("expiry") else None)
-    )
+    creds = Credentials(**creds_data)
 
-    # The AuthorizedSession in the image_proxy will handle automatic token refreshes.
-    # We only need to check for a non-refreshable expired token.
     if creds.expired and not creds.refresh_token:
         flash("Your Google session has expired and cannot be refreshed. Please log in again.")
-        session.pop("credentials", None)
         return None
 
     return creds
