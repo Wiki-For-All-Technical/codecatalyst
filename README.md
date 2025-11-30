@@ -3,6 +3,7 @@ G2COMMONS
 A Web application that uploads photos on Wikki Commons
 ________________________________________
 Description
+
 G2COMMONS is a lightweight, user-friendly Python Flask web application that allows users to upload photos directly to Wikimedia Commons through a web interface.
 The goal of this project is to simplify the process of contributing media to Wikimedia projects by providing an easy-to-use upload workflow.
 The app handles:
@@ -12,6 +13,7 @@ The app handles:
 •	Validation for supported file types
 ________________________________________
 Installation
+
 1. Clone the repository
 git clone https://github.com/Wiki-For-All-Technical/codecatalyst.git
 cd codecatalyst
@@ -29,6 +31,7 @@ Access the application at:
 http://127.0.0.1:5000/
 ________________________________________
 Usage
+
 1.	Open the web app in your browser.
 2.	Click Upload Photo.
 3.	Choose an image file (JPG, PNG, etc.).
