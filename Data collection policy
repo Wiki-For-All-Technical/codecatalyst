@@ -1,0 +1,41 @@
+1. What Data We Collect
+We temporarily collect the following information during the upload process:
+a. Image Upload Data
+•	Image file uploaded by the user
+•	Title of the file
+•	Description / caption
+•	Categories
+•	License information
+This data is required for uploading the image to Wikimedia Commons, where it becomes public.
+2. What Data We Do NOT Collect
+•	We do not store Wikimedia usernames or passwords.
+•	We do not store uploaded files after the upload process is complete.
+•	We do not collect personal information such as location, contact details, or device IDs.
+•	We do not use cookies or tracking technologies unless added explicitly by the user.
+
+3. How We Use the Collected Data
+Collected data is used strictly for:
+•	Processing uploads to Wikimedia Commons
+•	Communicating with the MediaWiki API
+•	Debugging errors
+•	Improving functionality
+We do not use data for marketing, analytics, or profiling.
+
+4. Data Sharing
+We only share your upload data with:
+•	Wikimedia Commons (MediaWiki API) — to complete your upload.
+No data is sold, rented, or shared with third-party entities.
+
+5. Data Storage
+•	Upload files are stored temporarily during the upload process.
+•	Once the upload is completed, files are deleted automatically from the server.
+•	No long-term storage of personal or file data occurs.
+
+6. User Control
+You may:
+•	Stop using the application anytime
+•	Choose which images to upload
+•	Edit or delete uploaded images directly on Wikimedia Commons
+
+7. Contact
+For any questions about this policy, contact: [https://github.com/Wiki-For-All-Technical]
