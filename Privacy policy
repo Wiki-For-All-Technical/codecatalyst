@@ -1,0 +1,21 @@
+
+This web application allows users to upload images to Wikimedia Commons using the MediaWiki API.
+We respect your privacy and keep your data safe.
+1. Information We Collect
+•	Uploaded images and the metadata you provide (title, description, categories).
+•	Temporary technical logs for performance and debugging.
+2. How We Use Your Information
+•	To process and upload your image to Wikimedia Commons.
+•	To improve the app’s performance and fix errors.
+3. Data Storage
+•	We do not store your Wikimedia login credentials.
+•	Uploaded images are sent directly to Wikimedia Commons, where they become public.
+•	No permanent copies of your files are saved on our server.
+4. Third-Party Services
+Uploads are handled through the Wikimedia Commons MediaWiki API.
+Wikimedia’s privacy policy also applies.
+5. Your Choices
+You may stop using the app at any time.
+You can edit or delete your uploaded files directly on Wikimedia Commons.
+6. Contact
+For questions, contact: [https://github.com/Wiki-For-All-Technical]
