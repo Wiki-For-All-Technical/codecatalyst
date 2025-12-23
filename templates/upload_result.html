@@ -2,9 +2,31 @@
 
 {% block content %}
 <h2>Upload Results</h2>
+{% set success_count = 0 %}
+{% for r in results %}
+    {% if r.upload and r.upload.result == 'Success' %}
+        {% set success_count = success_count + 1 %}
+    {% endif %}
+{% endfor %}
+
+{% if success_count > 0 %}
+    <div class="success-message">
+        <h3>Image uploaded successfully!</h3>
+        <p>{{ success_count }} image(s) uploaded to Wikimedia Commons.</p>
+    </div>
+{% endif %}
+
 <ul>
     {% for r in results %}
-        <li>{{ r }}</li>
+        <li>
+            {% if r.upload and r.upload.result == 'Success' %}
+                <span class="success">✓ {{ r.upload.filename }} uploaded successfully</span>
+            {% elif r.error %}
+                <span class="error">✗ {{ r.error }}</span>
+            {% else %}
+                {{ r }}
+            {% endif %}
+        </li>
     {% endfor %}
 </ul>
 <a href="{{ url_for('main.index') }}">Back to Home</a>

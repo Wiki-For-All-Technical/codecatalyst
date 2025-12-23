@@ -1,96 +1,73 @@
-from flask import session, redirect, request, url_for, flash
+from flask import session, redirect, url_for, current_app, request
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request as GoogleAuthRequest
-from config import Config
+from datetime import datetime
+import logging
 
-def get_google_flow(state=None):
-    return Flow.from_client_config(
-        {
-            "web": {
-                "client_id": Config.GOOGLE_CLIENT_ID,
-                "client_secret": Config.GOOGLE_CLIENT_SECRET,
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [Config.GOOGLE_REDIRECT_URI],
-            }
-        },
-        scopes=Config.GOOGLE_SCOPES,
-        state=state,
-        redirect_uri=Config.GOOGLE_REDIRECT_URI,
-    )
 
-# ...existing code...
-def login():
-    flow = get_google_flow()
-    auth_url, state = flow.authorization_url(
-        # access_type="offline" is needed to get a refresh token.
-        # The library includes this by default if the scope includes 'offline_access',
-        # but it's good practice to be explicit.
-        access_type="offline",
-        prompt="consent"  # Force consent to ensure a refresh_token is always requested.
-    )
-    session["state"] = state
-    return redirect(auth_url)
-
-def callback():
-    state = session.pop("state", None)
-    flow = get_google_flow(state=state)
-    try:
-        # Use full authorization_response to preserve state/code
-        flow.fetch_token(authorization_response=request.url)
-    except Exception as e:
-        # log useful debug info and ask user to re-authenticate
-        import logging, traceback
-        logging.exception("Google token exchange failed")
-        print("AUTH URL:", request.url)
-        print("REQUEST ARGS:", dict(request.args))
-        traceback.print_exc()
-        flash("Google token exchange failed; please try logging in again.")
-        return redirect(url_for("main.google_login"))
-
-    creds = flow.credentials
-    session["credentials"] = creds_to_dict(creds)
-    flash("Google login successful")
-    return redirect(url_for("gallery.select_domain"))
-
-# new helper to fetch photos using Photos Library API
-def list_google_photos(max_items=50):
-    from googleapiclient.discovery import build
-    creds = get_credentials()
-    if not creds:
-        return None, "No valid Google credentials"
-    try:
-        photos_service = build("photoslibrary", "v1", credentials=creds, static_discovery=False)
-        results = photos_service.mediaItems().list(pageSize=max_items).execute()
-        items = results.get("mediaItems", [])
-        return items, None
-    except Exception as e:
-        import logging, traceback
-        logging.exception("Failed to list Google Photos media items")
-        traceback.print_exc()
-        return None, str(e)
-# ...existing code...
-
-def creds_to_dict(credentials):
+def creds_to_dict(creds):
+    """Helper function to convert Google credentials object to a JSON-serializable dictionary."""
     return {
-        'token': credentials.token,
-        'refresh_token': credentials.refresh_token,
-        'token_uri': credentials.token_uri,
-        'client_id': credentials.client_id,
-        'client_secret': credentials.client_secret,
-        'scopes': credentials.scopes
+        'token': creds.token,
+        'refresh_token': creds.refresh_token,
+        'token_uri': creds.token_uri,
+        'client_id': creds.client_id,
+        'client_secret': creds.client_secret,
+        'scopes': creds.scopes,
+        'expiry': creds.expiry.isoformat() if creds.expiry else None
     }
 
 def get_credentials():
-    if "credentials" not in session:
+    """Retrieves Google credentials from the session and reconstructs the Credentials object."""
+    if 'credentials' not in session:
         return None
+    creds_dict = session['credentials']
     
-    creds_data = session["credentials"]
-    creds = Credentials(**creds_data)
+    # Create a copy to avoid modifying the session directly
+    creds_data = creds_dict.copy()
+    if creds_data.get('expiry'):
+        creds_data['expiry'] = datetime.fromisoformat(creds_data['expiry'])
+    return Credentials(**creds_data)
 
-    if creds.expired and not creds.refresh_token:
-        flash("Your Google session has expired and cannot be refreshed. Please log in again.")
-        return None
+def get_flow():
+    """Builds the Google OAuth Flow object from the app config."""
+    return Flow.from_client_config(
+        client_config={
+            "web": {
+                "client_id": current_app.config["GOOGLE_CLIENT_ID"],
+                "client_secret": current_app.config["GOOGLE_CLIENT_SECRET"],
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [current_app.config["GOOGLE_REDIRECT_URI"]],
+            }
+        },
+        scopes=current_app.config["GOOGLE_SCOPES"],
+        redirect_uri=current_app.config["GOOGLE_REDIRECT_URI"]
+    )
 
-    return creds
+def login():
+    """Initiates the Google login flow, forcing the consent screen to appear."""
+    flow = get_flow()
+    # 'prompt=consent' is the crucial fix. It forces the consent screen to appear every time,
+    # ensuring that new scopes (like Google Photos) are requested from the user.
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        prompt='select_account consent'
+    )
+    session['state'] = state
+    return redirect(authorization_url)
+
+def callback():
+    """Handles the callback from Google after user authentication."""
+    flow = get_flow()
+    flow.fetch_token(authorization_response=request.url)
+
+    credentials = flow.credentials
+    
+    # DEBUG LOGGING: Check exactly what scopes Google returned
+    logging.info(f"--- GOOGLE LOGIN CALLBACK ---")
+    logging.info(f"Granted Scopes: {credentials.scopes}")
+    
+    session['credentials'] = creds_to_dict(credentials)
+
+    return redirect(url_for('gallery.select_domain'))

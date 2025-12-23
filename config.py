@@ -5,7 +5,9 @@ class Config:
 
     # Flask-Session
     SESSION_TYPE = 'filesystem'
-    SESSION_PERMANENT = False
+    SESSION_PERMANENT = True
+    PERMANENT_SESSION_LIFETIME = 3600  # 1 hour in seconds
+    SESSION_FILE_DIR = os.path.join(os.getcwd(), "flask_session")
 
     # Google
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")

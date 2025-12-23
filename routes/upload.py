@@ -3,8 +3,9 @@ from auth import wiki
 from config import Config
 import base64
 from auth.google import get_credentials
-import requests
+from google.auth.transport.requests import AuthorizedSession
 from requests_oauthlib import OAuth1Session
+import time
 
 upload_bp = Blueprint("upload", __name__, url_prefix="/upload")
 
@@ -15,6 +16,7 @@ def metadata():
         flash("No images selected.")
         return redirect(url_for("gallery.select_domain"))
     session["selected_images"] = selected
+    session.modified = True
     return render_template("metadata.html", images=selected)
 
 @upload_bp.route("/save_metadata", methods=["POST"])
@@ -23,14 +25,25 @@ def save_metadata():
     image_urls = request.form.getlist("image_url")
     titles = request.form.getlist("title")
     descriptions = request.form.getlist("description")
+    print(f"DEBUG: Received {len(image_urls)} images in save_metadata")
+    print(f"DEBUG: Titles: {titles}, Descriptions: {descriptions}")
+
+    if not image_urls:
+        print("DEBUG: No image URLs received")
+        flash("Error: No image data received. Please try again.")
+        return redirect(url_for("gallery.select_domain"))
 
     # Structure metadata and store in session
     metadata_list = []
     for i in range(len(image_urls)):
         metadata_list.append({"url": image_urls[i], "title": titles[i], "description": descriptions[i]})
-    
+
     session["upload_metadata"] = metadata_list
-    return redirect(url_for("upload.wiki_login"))
+    print(f"DEBUG: Saved metadata to session: {len(metadata_list)} items")
+    print(f"DEBUG: Session keys after save: {list(session.keys())}")
+    session.permanent = True
+    session.modified = True
+    return render_template("wiki_login.html")
 
 @upload_bp.route("/wiki_login")
 def wiki_login():
@@ -40,54 +53,89 @@ def wiki_login():
 def wiki_callback():
     return wiki.finish_login()
 
+@upload_bp.route("/verify_login", methods=["POST"])
+def verify_login():
+    username = request.form.get("username")
+    password = request.form.get("password")
+    # For now, just store the username in session and redirect to upload option
+    session["wiki_username"] = username
+    session.modified = True
+    return redirect(url_for("upload.upload_option"))
+
+@upload_bp.route("/upload_option")
+def upload_option():
+    return render_template("upload_option.html")
+
 @upload_bp.route("/do_upload")
 def do_upload():
     metadata_list = session.get("upload_metadata", [])
     wiki_tokens = session.get("wiki_access_token")
+    print(f"DEBUG: do_upload - Metadata count: {len(metadata_list)}, Tokens present: {bool(wiki_tokens)}")
+    print(f"DEBUG: Session keys in do_upload: {list(session.keys())}")
+    print(f"DEBUG: Session permanent: {session.permanent}")
+    print(f"DEBUG: Session modified: {session.modified}")
 
-    if not metadata_list or not wiki_tokens:
-        flash("Missing images or Wikimedia login")
-    if not metadata_list or not wiki_tokens:
-        flash("Missing image metadata or Wikimedia login")
-        return redirect(url_for("main.index"))
+    if not metadata_list:
+        print("DEBUG: No metadata found, redirecting to select_domain")
+        flash("Session expired. Please select images again.")
+        return redirect(url_for("gallery.select_domain"))
+
+    if not wiki_tokens:
+        return redirect(url_for("upload.wiki_login"))
 
     # Create authenticated session
+    google_creds = get_credentials()
+    if not google_creds:
+        flash("Google session expired. Please log in again.")
+        return redirect(url_for("main.google_login"))
+
     oauth = OAuth1Session(
         client_key=Config.WIKI_CONSUMER_KEY,
         client_secret=Config.WIKI_CONSUMER_SECRET,
         resource_owner_key=wiki_tokens["oauth_token"],
         resource_owner_secret=wiki_tokens["oauth_token_secret"],
     )
+    oauth.headers.update({'User-Agent': 'WikimediaUploader/1.0'})
 
     # Step 2: Upload images
     upload_results = []
     for item in metadata_list:
         try:
             # Step 1: Get CSRF token for each upload
-            token_resp = oauth.get(Config.WIKI_API, params={"action": "query", "meta": "tokens", "type": "csrf", "format": "json"}).json()
-            csrf_token = token_resp["query"]["tokens"]["csrftoken"]
+            try:
+                token_response = oauth.get(Config.WIKI_API, params={"action": "query", "meta": "tokens", "type": "csrf", "format": "json"})
+                if token_response.status_code == 200:
+                    token_resp = token_response.json()
+                    csrf_token = token_resp["query"]["tokens"]["csrftoken"]
+                else:
+                    upload_results.append({"error": f"Failed to get CSRF token for {item.get('title', 'image')}: HTTP {token_response.status_code}: {token_response.text}"})
+                    continue
+            except ValueError as e:
+                upload_results.append({"error": f"Failed to parse CSRF token response for {item.get('title', 'image')}: {e}. Response: {token_response.text[:500]}"})
+                continue
+            except Exception as e:
+                upload_results.append({"error": f"Failed to get CSRF token for {item.get('title', 'image')}: {e}"})
+                continue
 
-            # Step 2: Fetch image data via proxy.
-            # The URL from the form is /gallery/image_proxy/<encoded_url_of_thumbnail>
+            # Step 2: Fetch image data directly from Google (bypass local proxy)
             encoded_url_part = item['url'].split('/')[-1]
-            
-            # Decode the URL to get the original Google URL, remove the size parameter for full resolution
             decoded_url = base64.urlsafe_b64decode(encoded_url_part).decode()
-            if "=w200-h200" in decoded_url: # Specific to Google Photos
-                base_url = decoded_url.split("=w200-h200")[0]
-                # Re-encode the full-resolution URL for the proxy
-                encoded_url_part = base64.urlsafe_b64encode(base_url.encode()).decode()
-
-            full_image_url = url_for('gallery.image_proxy', image_url=encoded_url_part, _external=True)
             
-            # Pass the session cookie which contains the Google auth token to the proxy endpoint
-            session_cookie = request.cookies.get('session')
-            image_response = requests.get(full_image_url, cookies={'session': session_cookie}, stream=True)
+            if "=w200-h200" in decoded_url: # Specific to Google Photos, remove size param
+                base_url = decoded_url.split("=w200-h200")[0]
+            else:
+                base_url = decoded_url
+
+            # Make an authenticated request directly to Google
+            google_authed_session = AuthorizedSession(google_creds)
+            image_response = google_authed_session.get(base_url, stream=True)
             image_response.raise_for_status()
             image_content = image_response.content
 
             # Step 3: Upload the file content to Wikimedia
-            filename = item['title'].strip().replace(" ", "_") + ".jpg" if item['title'].strip() else f"Wikigram_Upload_{item['url'][-10:]}.jpg"
+            base_filename = item['title'].strip().replace(" ", "_") if item['title'].strip() else f"Wikigram_Upload_{item['url'][-10:]}"
+            timestamp = str(int(time.time()))
+            filename = f"{base_filename}_{timestamp}.jpg"
             
             upload_request = oauth.post(
                 Config.WIKI_API,
@@ -97,7 +145,17 @@ def do_upload():
                     "comment": item['description'], "format": "json", "ignorewarnings": 1,
                 }
             )
-            upload_results.append(upload_request.json())
+
+            # Check if the response is valid JSON before parsing
+            try:
+                if upload_request.status_code == 200:
+                    result = upload_request.json()
+                    upload_results.append(result)
+                else:
+                    upload_results.append({"error": f"HTTP {upload_request.status_code}: {upload_request.text}"})
+            except ValueError as e:
+                # JSON parsing failed
+                upload_results.append({"error": f"Failed to parse response for {filename}: {e}. Response: {upload_request.text[:500]}"})
         except Exception as e:
             upload_results.append({"error": f"Failed to upload {item.get('title', 'image')}: {e}"})
 

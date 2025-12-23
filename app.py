@@ -1,19 +1,24 @@
 # app.py
-from flask import Flask
-from flask_session import Session
 from dotenv import load_dotenv
 import os
+
+load_dotenv()
+
+from flask import Flask
+from flask_session import Session
+from config import Config
 # Register blueprints
 from routes.main import main_bp
 from routes.gallery import gallery_bp
 from routes.upload import upload_bp
-from config import Config
-
-load_dotenv()
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 app = Flask(__name__)
 app.config.from_object("config.Config")
+
+# Ensure session directory exists
+if not os.path.exists(app.config["SESSION_FILE_DIR"]):
+    os.makedirs(app.config["SESSION_FILE_DIR"])
 
 # Initialize server-side session
 Session(app)

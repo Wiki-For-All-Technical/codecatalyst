@@ -2,14 +2,35 @@
 
 {% block content %}
 <h2>Add Metadata</h2>
-<form method="GET" action="{{ url_for('upload.wiki_login') }}">
+<form method="POST" action="{{ url_for('upload.save_metadata') }}">
     {% for img in images %}
+        <input type="hidden" name="image_url" value="{{ img }}">
         <div class="metadata-item">
             <img src="{{ img }}" alt="Image">
-            <input type="text" name="title_{{ loop.index }}" placeholder="Title">
-            <input type="text" name="desc_{{ loop.index }}" placeholder="Description">
+            <div class="input-group">
+                <input type="text" name="title" placeholder="Title" id="title_{{ loop.index }}" required>
+                {% if loop.first and images|length > 1 %}
+                    <button type="button" class="apply-all-btn" onclick="applyToAll('title')">Apply to All</button>
+                {% endif %}
+            </div>
+            <div class="input-group">
+                <input type="text" name="description" placeholder="Description" id="desc_{{ loop.index }}" required>
+                {% if loop.first and images|length > 1 %}
+                    <button type="button" class="apply-all-btn" onclick="applyToAll('desc')">Apply to All</button>
+                {% endif %}
+            </div>
         </div>
     {% endfor %}
     <button type="submit">Login to Wikimedia & Upload</button>
 </form>
+
+<script>
+function applyToAll(type) {
+    const firstValue = document.getElementById(type + '_1').value;
+    const inputs = document.querySelectorAll('input[name^="' + type + '_"]');
+    inputs.forEach(input => {
+        input.value = firstValue;
+    });
+}
+</script>
 {% endblock %}

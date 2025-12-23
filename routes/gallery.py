@@ -1,11 +1,13 @@
 # routes/gallery.py
 from flask import Blueprint, render_template, redirect, url_for, request, session, flash, Response
 import logging # Import the logging library
-from google.auth.transport.requests import AuthorizedSession
-from auth.google import get_credentials
+from google.auth.transport.requests import Request, AuthorizedSession
+from auth.google import get_credentials, creds_to_dict
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 import requests
 import base64
+
 
 gallery_bp = Blueprint("gallery", __name__, url_prefix="/gallery")
 
@@ -47,30 +49,42 @@ def fetch_images(): # sourcery skip: extract-method
 
     # Manually refresh token if expired. This is more compatible than using listeners.
     if creds.expired and creds.refresh_token:
-        from google.auth.transport.requests import Request
         creds.refresh(Request())
-        # Save the updated credentials back to the session
-        session["credentials"] = {
-            "token": creds.token,
-            "refresh_token": creds.refresh_token,
-            "token_uri": creds.token_uri,
-            "client_id": creds.client_id,
-            "client_secret": creds.client_secret,
-            "scopes": creds.scopes,
-            "expiry": creds.expiry.isoformat() if creds.expiry else None,
-        }
+        # Save the updated credentials (including the new expiry) back to the session
+        session["credentials"] = creds_to_dict(creds)
 
     new_images = []
 
     if domain == "photos":
         # Fetch from Google Photos using googleapiclient
         try:
-            # Create a fresh session for this API call to avoid state leakage
-            photos_session = AuthorizedSession(creds)
-            service = build("photoslibrary", "v1", http=photos_session, static_discovery=False)
-            results = service.mediaItems().search(
-                body={"pageSize": 25, "pageToken": next_page_token}
-            ).execute()
+            logging.info(f"Attempting to fetch photos. Current Scopes: {creds.scopes}")
+            
+            # DEBUG: Ask Google what scopes this token ACTUALLY has
+            token_info = requests.get(f"https://oauth2.googleapis.com/tokeninfo?access_token={creds.token}").json()
+            real_scopes = token_info.get("scope", "")
+            logging.info(f"--- REAL TOKEN SCOPES FROM GOOGLE: {real_scopes} ---")
+
+            # DIAGNOSTIC CHECK: Do we actually have the scope?
+            if "https://www.googleapis.com/auth/photoslibrary.readonly" not in real_scopes:
+                flash("Configuration Error: Google did not grant the Photos permission. Please go to Google Cloud Console > APIs & Services > OAuth Consent Screen and ensure 'Google Photos Library API' is added to the Scopes.")
+                session.pop("credentials", None)
+                return redirect(url_for("main.google_login"))
+            
+            # Use direct requests with the token to ensure no library state issues interfere
+            headers = {'Authorization': f'Bearer {creds.token}'}
+            params = {'pageSize': 25}
+            if next_page_token:
+                params['pageToken'] = next_page_token
+
+            logging.info("Sending request to Google Photos API...")
+            response = requests.get("https://photoslibrary.googleapis.com/v1/mediaItems", params=params, headers=headers)
+            logging.info(f"Response Status: {response.status_code}")
+            if response.status_code != 200:
+                logging.error(f"Response Body: {response.text}")
+
+            response.raise_for_status()  # This will raise HttpError on 403
+            results = response.json()
             
             all_items = results.get("mediaItems", [])
             session["next_page_token"] = results.get("nextPageToken")
@@ -82,8 +96,32 @@ def fetch_images(): # sourcery skip: extract-method
             ]
             
         except Exception as e:
-            logging.exception("Error fetching from Google Photos:") # Log the full error
-            flash(f"Error fetching from Google Photos. Please ensure the Google Photos Library API is enabled in your Google Cloud Console. Error: {e}")
+            # Robustly check for 403 Forbidden errors from any library (requests or googleapiclient)
+            status_code = None
+            error_message = str(e)
+            
+            if hasattr(e, 'response') and e.response is not None:
+                status_code = getattr(e.response, 'status_code', None)
+                # Try to extract the actual error message from Google's JSON response
+                try:
+                    error_json = e.response.json()
+                    error_message = error_json.get('error', {}).get('message', error_message)
+                except:
+                    pass # Keep the default string representation if parsing fails
+            
+            # Only redirect to login if it is explicitly a scope/permission issue
+            if status_code == 403:
+                # If we passed the diagnostic check above, but still get 403, it means the API is disabled.
+                flash(f"Project Error: The 'Google Photos Library API' is likely not enabled. Please go to Google Cloud Console > APIs & Services > Library and enable it for project 'enduring-sweep-472913-u6'. Error: {error_message}")
+                flash(f"Google API Error (403): {error_message}. Diagnostic: Token HAS correct scopes. "
+                      f"CHECK THESE 3 THINGS: "
+                      f"1. 'Test Users': Go to OAuth Consent Screen in Cloud Console. Is your email added to 'Test Users'? "
+                      f"2. Wrong API: Did you enable 'Google Photos Picker API' instead of 'Google Photos Library API'? "
+                      f"3. Project ID: Ensure you are in project 'enduring-sweep-472913-u6'.")
+                return redirect(url_for("gallery.select_domain"))
+            
+            logging.exception("Error fetching from Google Photos:")
+            flash(f"Error fetching from Google Photos: {error_message}")
             return redirect(url_for("gallery.select_domain"))
 
     elif domain == "drive":

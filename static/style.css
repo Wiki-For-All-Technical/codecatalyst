@@ -107,13 +107,34 @@ select {
     border-radius: 5px;
 }
 
-.metadata-item input {
-    width: 100%;
-    padding: 8px;
+.input-group {
+    display: flex;
+    align-items: center;
     margin: 5px 0;
+}
+
+.input-group input {
+    flex: 1;
+    padding: 8px;
     border: 1px solid #ddd;
     border-radius: 5px;
     font-size: 1em;
+}
+
+.apply-all-btn {
+    background: linear-gradient(to right, #27ae60, #2ecc71);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    margin-left: 10px;
+    transition: background 0.3s;
+}
+
+.apply-all-btn:hover {
+    background: linear-gradient(to right, #229954, #27ae60);
 }
 
 /* Upload Results */

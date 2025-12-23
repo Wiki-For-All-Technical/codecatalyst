@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Upload Options</h2>
+<p>Login verified. Choose your upload option:</p>
+<form method="POST" action="{{ url_for('upload.do_upload') }}">
+    <button type="submit">Start Upload</button>
+</form>
+{% endblock %}
