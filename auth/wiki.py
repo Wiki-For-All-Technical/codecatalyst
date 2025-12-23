@@ -6,18 +6,6 @@ import os
 USER_AGENT = "WikimediaUploader/1.0 (https://your-app-url.com; your-email@example.com)" # Replace with your app's URL and contact email
 
 def start_login():
-    # Check if we have owner-only tokens configured in environment
-    access_token = os.environ.get("WIKI_ACCESS_TOKEN")
-    access_secret = os.environ.get("WIKI_ACCESS_SECRET")
-
-    if access_token and access_secret:
-        session["wiki_access_token"] = {
-            "oauth_token": access_token,
-            "oauth_token_secret": access_secret
-        }
-        session.modified = True
-        return redirect(url_for("upload.do_upload"))
-
     if not Config.WIKI_CONSUMER_KEY or not Config.WIKI_CONSUMER_SECRET:
         raise ValueError("WIKI_CONSUMER_KEY and WIKI_CONSUMER_SECRET must be set in environment variables.")
     oauth = OAuth1Session(

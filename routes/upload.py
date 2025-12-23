@@ -66,7 +66,7 @@ def verify_login():
 def upload_option():
     return render_template("upload_option.html")
 
-@upload_bp.route("/do_upload")
+@upload_bp.route("/do_upload", methods=["GET", "POST"])
 def do_upload():
     metadata_list = session.get("upload_metadata", [])
     wiki_tokens = session.get("wiki_access_token")
@@ -120,9 +120,12 @@ def do_upload():
             # Step 2: Fetch image data directly from Google (bypass local proxy)
             encoded_url_part = item['url'].split('/')[-1]
             decoded_url = base64.urlsafe_b64decode(encoded_url_part).decode()
-            
-            if "=w200-h200" in decoded_url: # Specific to Google Photos, remove size param
-                base_url = decoded_url.split("=w200-h200")[0]
+
+            # Remove any size parameters to get the full-size image
+            # Google Photos URLs may contain parameters like =w200-h200, =s400, etc.
+            if '=' in decoded_url and ('-h' in decoded_url or '-w' in decoded_url or decoded_url.endswith('=s400')):
+                # Remove size parameters to get full resolution
+                base_url = decoded_url.split('=')[0]
             else:
                 base_url = decoded_url
 
