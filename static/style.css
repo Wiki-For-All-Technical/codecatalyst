@@ -1510,3 +1510,41 @@ a:hover {
 @media (max-width: 520px) {
     .about-grid { grid-template-columns: 1fr; }
 }
+
+/* ───────────────────────────── Shared Album Instructions ── */
+.album-instructions {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 16px 20px;
+}
+
+.album-instructions h4 {
+    font-size: 0.92rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--text);
+}
+
+.album-instructions ol {
+    padding-left: 20px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    line-height: 2;
+}
+
+.album-instructions ol li strong {
+    color: var(--text);
+}
+
+.album-instructions ol a {
+    color: var(--accent-lt);
+}
+
+.form-hint {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 5px;
+}
