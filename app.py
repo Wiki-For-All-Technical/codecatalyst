@@ -17,8 +17,8 @@ app = Flask(__name__)
 app.config.from_object("config.Config")
 
 # Ensure session directory exists
-if not os.path.exists(app.config["SESSION_FILE_DIR"]):
-    os.makedirs(app.config["SESSION_FILE_DIR"])
+if not os.path.exists(".flask_sessions"):
+    os.makedirs(".flask_sessions")
 
 # Initialize server-side session
 Session(app)

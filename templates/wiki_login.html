@@ -1,17 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Login to Wikimedia</h2>
-<p>Please enter your Wikimedia username and password to proceed with the upload.</p>
-<form method="POST" action="{{ url_for('upload.verify_login') }}">
-    <div class="input-group">
-        <label for="username">Username:</label>
-        <input type="text" name="username" id="username" required>
-    </div>
-    <div class="input-group">
-        <label for="password">Password:</label>
-        <input type="password" name="password" id="password" required>
-    </div>
-    <button type="submit">Verify & Proceed</button>
+<h2>Login to Wikimedia Commons</h2>
+<p>To upload to Wikimedia Commons, please authenticate with Wikimedia.</p>
+<form method="POST" action="{{ url_for('upload.wiki_authenticate') }}">
+    <button type="submit" class="btn btn-primary">Login to Wikimedia Commons</button>
 </form>
+<p><small>You will be securely authenticated to access Wikimedia Commons.</small></p>
 {% endblock %}

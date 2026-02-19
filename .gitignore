@@ -1,0 +1,9 @@
+.env
+__pycache__/
+auth/__pycache__/
+*.pyc
+.DS_Store
+flask_session/
+.flask_sessions/
+client_secret.json
+*.pickle

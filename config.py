@@ -7,7 +7,7 @@ class Config:
     SESSION_TYPE = 'filesystem'
     SESSION_PERMANENT = True
     PERMANENT_SESSION_LIFETIME = 3600  # 1 hour in seconds
-    SESSION_FILE_DIR = os.path.join(os.getcwd(), "flask_session")
+    SESSION_FILE_DIR = os.path.join(os.getcwd(), ".flask_sessions")
 
     # Google
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
@@ -17,6 +17,9 @@ class Config:
     # Wikimedia
     WIKI_CONSUMER_KEY = os.getenv("WIKI_CONSUMER_KEY")
     WIKI_CONSUMER_SECRET = os.getenv("WIKI_CONSUMER_SECRET")
+    WIKI_CALLBACK_URL = os.getenv("WIKI_CALLBACK_URL", "http://localhost:5000/oauth_callback")
+    WIKI_ACCESS_TOKEN = os.getenv("WIKI_ACCESS_TOKEN")
+    WIKI_ACCESS_SECRET = os.getenv("WIKI_ACCESS_SECRET")
 
     # API endpoints
     WIKI_INITIATE = "https://commons.wikimedia.org/w/index.php?title=Special:OAuth/initiate&format=json"

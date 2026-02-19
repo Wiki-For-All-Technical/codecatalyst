@@ -6,6 +6,7 @@ from auth.google import get_credentials
 from google.auth.transport.requests import AuthorizedSession
 from requests_oauthlib import OAuth1Session
 import time
+import re
 
 upload_bp = Blueprint("upload", __name__, url_prefix="/upload")
 
@@ -21,7 +22,7 @@ def metadata():
 
 @upload_bp.route("/save_metadata", methods=["POST"])
 def save_metadata():
-    """Save metadata from form and redirect to Wikimedia login."""
+    """Save metadata from form and proceed to upload."""
     image_urls = request.form.getlist("image_url")
     titles = request.form.getlist("title")
     descriptions = request.form.getlist("description")
@@ -43,15 +44,35 @@ def save_metadata():
     print(f"DEBUG: Session keys after save: {list(session.keys())}")
     session.permanent = True
     session.modified = True
-    return render_template("wiki_login.html")
+    return redirect(url_for("upload.do_upload"))
 
 @upload_bp.route("/wiki_login")
 def wiki_login():
+    # Show the login page first
+    session["post_wiki_next"] = url_for("gallery.select_domain")
+    session.modified = True
+    return render_template("wiki_login.html")
+
+@upload_bp.route("/wiki_authenticate", methods=["POST"])
+def wiki_authenticate():
+    # Always use OAuth flow to ensure fresh tokens and show the actual login page.
+    # This avoids issues with expired/invalid pre-configured tokens.
     return wiki.start_login()
 
-@upload_bp.route("/wiki_callback")
-def wiki_callback():
-    return wiki.finish_login()
+
+@upload_bp.route("/wiki_success")
+def wiki_success():
+    """Display success message after Wikimedia login."""
+    return render_template("wiki_success.html")
+
+@upload_bp.route("/wiki_prompt")
+def wiki_prompt():
+    """Prompt the user to login to Wikimedia after successful Google login.
+    Stores the next page in session so flow returns to select domain after Wikimedia login."""
+    # Where to continue after Wikimedia login
+    session["post_wiki_next"] = url_for("gallery.select_domain")
+    session.modified = True
+    return render_template("wiki_login.html")
 
 @upload_bp.route("/verify_login", methods=["POST"])
 def verify_login():
@@ -104,17 +125,36 @@ def do_upload():
             # Step 1: Get CSRF token for each upload
             try:
                 token_response = oauth.get(Config.WIKI_API, params={"action": "query", "meta": "tokens", "type": "csrf", "format": "json"})
-                if token_response.status_code == 200:
+                token_response.raise_for_status()
+                
+                try:
                     token_resp = token_response.json()
-                    csrf_token = token_resp["query"]["tokens"]["csrftoken"]
-                else:
-                    upload_results.append({"error": f"Failed to get CSRF token for {item.get('title', 'image')}: HTTP {token_response.status_code}: {token_response.text}"})
+                except ValueError as json_err:
+                    upload_results.append({"error": f"Failed to parse JSON response: {json_err}. Response: {token_response.text[:500]}"})
                     continue
-            except ValueError as e:
-                upload_results.append({"error": f"Failed to parse CSRF token response for {item.get('title', 'image')}: {e}. Response: {token_response.text[:500]}"})
-                continue
+                
+                # Check for API errors (specifically invalid auth)
+                if "error" in token_resp:
+                    if token_resp["error"].get("code") == "mwoauth-invalid-authorization":
+                        session.pop("wiki_access_token", None)
+                        flash("Wikimedia authorization invalid. Please login again.")
+                        return redirect(url_for("upload.wiki_login"))
+                    upload_results.append({"error": f"API Error: {token_resp['error'].get('info')}"})
+                    continue
+
+                # Check if response has the expected structure
+                if "query" not in token_resp:
+                    upload_results.append({"error": f"Invalid API response for {item.get('title', 'image')}: Missing 'query' key. Response: {token_resp}"})
+                    continue
+                    
+                if "tokens" not in token_resp.get("query", {}):
+                    upload_results.append({"error": f"Invalid API response for {item.get('title', 'image')}: Missing 'tokens' in query. Response: {token_resp}"})
+                    continue
+                
+                csrf_token = token_resp["query"]["tokens"]["csrftoken"]
+                
             except Exception as e:
-                upload_results.append({"error": f"Failed to get CSRF token for {item.get('title', 'image')}: {e}"})
+                upload_results.append({"error": f"Failed to get CSRF token for {item.get('title', 'image')}: {type(e).__name__}: {str(e)}"})
                 continue
 
             # Step 2: Fetch image data directly from Google (bypass local proxy)
@@ -136,7 +176,9 @@ def do_upload():
             image_content = image_response.content
 
             # Step 3: Upload the file content to Wikimedia
-            base_filename = item['title'].strip().replace(" ", "_") if item['title'].strip() else f"Wikigram_Upload_{item['url'][-10:]}"
+            # Sanitize filename to remove illegal characters (like :, /, \, etc) that cause 'invalidparameter' errors
+            clean_title = re.sub(r'[^\w\s\-\.]', '', item['title']) if item['title'] else ""
+            base_filename = clean_title.strip().replace(" ", "_") if clean_title.strip() else f"Wikigram_Upload"
             timestamp = str(int(time.time()))
             filename = f"{base_filename}_{timestamp}.jpg"
             
@@ -145,6 +187,7 @@ def do_upload():
                 files={"file": (filename, image_content)},
                 data={
                     "action": "upload", "filename": filename, "token": csrf_token,
+                    "text": item['description'], # Required: The actual page content
                     "comment": item['description'], "format": "json", "ignorewarnings": 1,
                 }
             )
@@ -153,6 +196,10 @@ def do_upload():
             try:
                 if upload_request.status_code == 200:
                     result = upload_request.json()
+                    
+                    if "error" in result and result["error"].get("code") == "cantcreate":
+                        result["error"]["info"] += " CRITICAL: Your permissions are correct, but your LOGIN SESSION IS STALE. You MUST click 'Logout' (or visit /logout) and log in again to get a new token. The settings change does not apply to the current active session."
+
                     upload_results.append(result)
                 else:
                     upload_results.append({"error": f"HTTP {upload_request.status_code}: {upload_request.text}"})

@@ -2,6 +2,7 @@ from flask import session, redirect, url_for, current_app, request
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from datetime import datetime
+from requests.exceptions import SSLError
 import logging
 
 
@@ -60,7 +61,13 @@ def login():
 def callback():
     """Handles the callback from Google after user authentication."""
     flow = get_flow()
-    flow.fetch_token(authorization_response=request.url)
+    try:
+        flow.fetch_token(authorization_response=request.url)
+    except SSLError as e:
+        # This error is often caused by network issues (firewalls, proxies) or using an unstable
+        # Python version (like a pre-release of 3.13) with SSL/TLS bugs.
+        logging.error(f"SSL Error during Google token fetch: {e}")
+        return "Could not establish a secure connection to Google. This may be due to a network firewall, proxy, or an issue with your Python environment's SSL configuration. Please check your network settings and ensure you are using a stable Python version.", 500
 
     credentials = flow.credentials
     
@@ -70,4 +77,6 @@ def callback():
     
     session['credentials'] = creds_to_dict(credentials)
 
-    return redirect(url_for('gallery.select_domain'))
+    # After Google login, prompt user to login to Wikimedia Commons next.
+    # Store the page to continue after Wikimedia login (select source)
+    return redirect(url_for('upload.wiki_prompt'))
