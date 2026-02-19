@@ -5,10 +5,10 @@
 <div class="about-hero fade-in">
     <div class="about-hero-icon">🌐</div>
     <h1 class="page-title">About G2Commons</h1>
-    <p class="page-subtitle" style="max-width:600px;margin:0 auto;">
+    <p class="page-subtitle" style="max-width:620px;margin:0 auto;">
         G2Commons is a free, open-source web tool that makes it easy to upload media from
-        Google Drive and Google Photos directly to <a href="https://commons.wikimedia.org" target="_blank">Wikimedia
-            Commons</a> —
+        <strong>Google Drive</strong> and <strong>Google Photos</strong> directly to
+        <a href="https://commons.wikimedia.org" target="_blank">Wikimedia Commons</a> —
         the world's largest free media repository.
     </p>
 </div>
@@ -33,42 +33,89 @@
         </div>
     </div>
     <div class="about-card">
-        <div class="about-card-icon">🖼️</div>
-        <div class="about-card-title">Google Photos & Drive</div>
-        <div class="about-card-desc">Browse your personal library or Drive storage and select images to publish.</div>
+        <div class="about-card-icon">🔗</div>
+        <div class="about-card-title">No API Key for Photos</div>
+        <div class="about-card-desc">Share a public Google Photos album link — G2Commons fetches photos directly from
+            the public URL. No Google Photos API approval needed.</div>
+    </div>
+    <div class="about-card">
+        <div class="about-card-icon">📁</div>
+        <div class="about-card-title">Google Drive</div>
+        <div class="about-card-desc">Browse and select image files directly from your personal or shared Google Drive
+            storage.</div>
     </div>
     <div class="about-card">
         <div class="about-card-icon">📤</div>
         <div class="about-card-title">Wikimedia Commons Upload</div>
-        <div class="about-card-desc">Directly uploads files with structured wikitext, description, and categories.</div>
+        <div class="about-card-desc">Directly uploads files with structured wikitext, description, and categories via
+            the MediaWiki API.</div>
     </div>
     <div class="about-card">
         <div class="about-card-icon">🏷️</div>
-        <div class="about-card-title">Metadata Support</div>
-        <div class="about-card-desc">Add title, description, and Categories for each image before uploading.</div>
+        <div class="about-card-title">Rich Metadata</div>
+        <div class="about-card-desc">Add title, description, and Wikimedia categories for each image before uploading.
+        </div>
     </div>
     <div class="about-card">
         <div class="about-card-icon">📦</div>
         <div class="about-card-title">Batch Uploads</div>
-        <div class="about-card-desc">Select multiple images and upload them all in one go.</div>
+        <div class="about-card-desc">Select multiple images from your album or Drive and upload them all in a single
+            workflow.</div>
     </div>
-    <div class="about-card">
-        <div class="about-card-icon">🆓</div>
-        <div class="about-card-title">Completely Free</div>
-        <div class="about-card-desc">100% free to use. No accounts, no subscriptions — just contribute.</div>
+</div>
+
+{# ── How Google Photos works ── #}
+<div class="card fade-in" style="max-width:680px;margin:0 auto 32px;text-align:left;">
+    <h2 style="margin-bottom:16px;">🖼️ How Google Photos Works</h2>
+    <p style="margin-bottom:16px;">
+        Instead of using the restricted Google Photos Library API, G2Commons uses a
+        <strong>shared public album</strong> approach — a smarter and more accessible method:
+    </p>
+    <div class="album-instructions">
+        <h4>📋 Steps to use Google Photos</h4>
+        <ol>
+            <li>Open <a href="https://photos.google.com" target="_blank">photos.google.com</a></li>
+            <li>Go to <strong>Albums</strong> and open (or create) the album you want to upload</li>
+            <li>Click the <strong>share icon</strong> → enable <strong>"Anyone with the link"</strong></li>
+            <li>Copy the shared link and paste it into G2Commons</li>
+            <li>G2Commons fetches all photos directly — <strong>no additional permission needed</strong></li>
+        </ol>
     </div>
+    <p class="text-muted" style="margin-top:14px;font-size:0.85rem;">
+        ✅ This means you <strong>don't need</strong> to grant G2Commons access to your entire Google Photos library —
+        only the specific album you choose to share.
+    </p>
+</div>
+
+{# ── How it Works ── #}
+<div class="card fade-in" style="max-width:680px;margin:0 auto 32px;text-align:left;">
+    <h2 style="margin-bottom:16px;">⚙️ How It Works</h2>
+    <ol style="padding-left:20px;line-height:2.2;color:var(--text-muted);font-size:0.92rem;">
+        <li><strong style="color:var(--text);">Login with Google</strong> — Grant access to Google Drive (for Drive
+            uploads)</li>
+        <li><strong style="color:var(--text);">Login with Wikimedia</strong> — OAuth 2.0 consent to upload on your
+            behalf</li>
+        <li><strong style="color:var(--text);">Pick source</strong> — Paste a Google Photos shared album URL, or browse
+            Google Drive</li>
+        <li><strong style="color:var(--text);">Select images</strong> — Multi-select from the gallery preview</li>
+        <li><strong style="color:var(--text);">Add metadata</strong> — Title, description, and Wikimedia categories per
+            image</li>
+        <li><strong style="color:var(--text);">Upload</strong> — Images transferred directly to Wikimedia Commons</li>
+        <li><strong style="color:var(--text);">Results</strong> — View success/failure summary with direct Commons links
+        </li>
+    </ol>
 </div>
 
 {# ── Tech Stack ── #}
 <div class="card fade-in" style="max-width:680px;margin:0 auto 32px;text-align:left;">
-    <h2 style="margin-bottom:16px;">⚙️ Technology Stack</h2>
+    <h2 style="margin-bottom:16px;">🛠️ Technology Stack</h2>
     <p class="text-muted" style="margin-bottom:16px;">G2Commons is built with modern, open-source technologies:</p>
     <div class="about-tech-stack">
         <span class="tech-badge">Python 3.14</span>
         <span class="tech-badge">Flask 3</span>
         <span class="tech-badge">Authlib (OAuth 2.0)</span>
-        <span class="tech-badge">Google Photos API</span>
         <span class="tech-badge">Google Drive API</span>
+        <span class="tech-badge">Google Photos (public scrape)</span>
         <span class="tech-badge">MediaWiki API</span>
         <span class="tech-badge">Flask-Session</span>
         <span class="tech-badge">Vanilla CSS</span>

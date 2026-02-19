@@ -15,9 +15,9 @@
 |--------|---------|
 | 🔐 **Google OAuth 2.0** | Secure sign-in — passwords never stored |
 | 🌐 **Wikimedia OAuth 2.0** | Authorise uploads via official Authlib flow |
-| �️ **Google Photos** | Browse and select from your personal photo library |
-| � **Google Drive** | Pick image files directly from your Drive |
-| � **Batch Uploads** | Select multiple images and upload them all at once |
+| 🔗 **No Photos API needed** | Share a public album link — photos fetched without API approval |
+| 📁 **Google Drive** | Browse and select image files directly from your Drive |
+| 📤 **Batch Uploads** | Select multiple images and upload them all at once |
 | 🏷️ **Rich Metadata** | Set title, description, and Wikimedia categories per image |
 | 🌙 **Dark / Light Mode** | Persistent theme toggle with no flash on reload |
 | 📋 **Privacy & ToS** | Built-in Privacy Policy and Terms of Use pages |
@@ -25,13 +25,34 @@
 
 ---
 
-## 🛠️ Tech Stack
+## �️ Google Photos — Shared Album Approach
+
+> **No Google Photos API approval required.**
+
+Instead of using the restricted Google Photos Library API (which requires OAuth scope approval that many cloud-hosted apps cannot obtain), G2Commons uses a **shared public album** approach:
+
+1. Open [photos.google.com](https://photos.google.com) and go to **Albums**
+2. Open the album you want to upload
+3. Click the **share icon** → enable **"Anyone with the link can view"**
+4. Copy the link and paste it into G2Commons
+5. G2Commons fetches all photos directly from the public album URL
+
+### Why this is better
+- ✅ **No API key needed** — just a public link
+- ✅ **More privacy-friendly** — you share only a specific album, not your entire library
+- ✅ **No OAuth scope approval** — works on all hosting environments including Wikimedia Cloud
+- ✅ **Full-resolution images** — fetched at original quality for Commons upload
+
+---
+
+## �🛠️ Tech Stack
 
 **Backend**
 - Python 3.14 · Flask 3
 - [Authlib](https://docs.authlib.org) — OAuth 2.0 for both Google and Wikimedia
 - Flask-Session — server-side session management
-- Google APIs: Drive API, Photos Library API
+- Google Drive API — Drive image browsing (OAuth)
+- Google Photos — public shared album HTML scraping (no API key)
 - MediaWiki REST API — Wikimedia Commons uploads
 
 **Frontend**
@@ -45,8 +66,10 @@
 
 - Python 3.10+
 - [`uv`](https://github.com/astral-sh/uv) (recommended) **or** `pip`
-- A **Google Cloud Project** with OAuth 2.0 credentials
+- A **Google Cloud Project** with OAuth 2.0 credentials (for Google Drive only)
 - A **Wikimedia consumer** registered at [Special:OAuthConsumerRegistration](https://meta.wikimedia.org/wiki/Special:OAuthConsumerRegistration) (select **OAuth 2.0**)
+
+> **Note:** You do **not** need to enable the Google Photos Library API. The shared album approach works without it.
 
 ---
 
@@ -84,7 +107,7 @@ Edit `.env` and fill in your credentials:
 ```env
 FLASK_SECRET_KEY="your-long-random-secret-key"
 
-# Google OAuth 2.0
+# Google OAuth 2.0  (needed for Google Drive; NOT needed for Google Photos)
 # From: https://console.cloud.google.com → APIs & Services → Credentials
 GOOGLE_CLIENT_ID="your-google-client-id"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
@@ -101,8 +124,8 @@ WIKI_REDIRECT_URI="http://localhost:5000/wiki_callback"
 ### 4. Enable Google APIs
 
 In [Google Cloud Console](https://console.cloud.google.com):
-1. Enable **Google Drive API**
-2. Enable **Google Photos Library API**
+1. Enable **Google Drive API** ← required for Drive source
+2. ~~Google Photos Library API~~ ← **NOT required** (we use shared album links instead)
 3. Add your email as a **test user** under the OAuth consent screen
 
 ---
@@ -120,7 +143,7 @@ This automatically activates the virtual environment, syncs dependencies, and st
 ### Manual start
 
 ```bash
-source .venv/bin/activate   # or: .venv\Scripts\activate on Windows
+source .venv/bin/activate
 flask run --debug
 ```
 
@@ -149,7 +172,7 @@ codecatalyst/
 │   └── upload.py             # /upload/* — metadata, Wikimedia auth, upload pipeline
 │
 ├── services/                 # Business logic layer
-│   ├── google_service.py     # Google Photos & Drive image fetching
+│   ├── google_service.py     # Shared album scraper + Google Drive fetching
 │   └── wikimedia_service.py  # Bearer token CSRF fetch + Commons upload
 │
 ├── templates/                # Jinja2 HTML templates
@@ -158,14 +181,14 @@ codecatalyst/
 │   ├── about.html            # About page
 │   ├── gallery.html          # Image selection gallery
 │   ├── metadata.html         # Per-image metadata form
-│   ├── select_domain.html    # Google Photos vs Drive picker
+│   ├── select_domain.html    # Source picker (album URL input or Drive)
 │   ├── upload_result.html    # Upload results summary
 │   ├── wiki_login.html       # Wikimedia connect page
 │   ├── wiki_success.html     # Post-OAuth success page
 │   ├── privacy.html          # Privacy Policy
 │   ├── terms.html            # Terms of Use
 │   └── partials/
-│       └── macros.html       # Reusable Jinja2 macros (steps_bar, flash_messages, etc.)
+│       └── macros.html       # Reusable Jinja2 macros
 │
 └── static/
     └── style.css             # Premium dark/light theme CSS
@@ -176,21 +199,36 @@ codecatalyst/
 ## 🧠 How It Works
 
 ```
-1. Login with Google  →  Grant access to Photos / Drive
-2. Login with Wikimedia  →  OAuth 2.0 consent via Authlib
-3. Pick source  →  Google Photos or Google Drive
-4. Select images  →  Multi-select gallery with AJAX pagination
-5. Add metadata  →  Title, description, categories per image
-6. Upload  →  Bearer token auth → CSRF token → MediaWiki upload API
-7. Results  →  Success/failure summary with Commons links
+Google Photos flow:
+──────────────────
+1. User creates a public Google Photos shared album
+2. User pastes the shared link into G2Commons
+3. G2Commons fetches the album's public HTML page (no API key needed)
+4. Photo URLs are extracted from lh3.googleusercontent.com CDN links
+5. Thumbnails are displayed; full-res originals uploaded to Commons
+
+Google Drive flow:
+──────────────────
+1. Login with Google → OAuth grants Drive read access
+2. Browse image files from your Drive
+3. Select images → add metadata → upload to Commons
+
+Common steps:
+─────────────
+4. Login with Wikimedia → OAuth 2.0 (Authlib)
+5. Add title, description, and categories per image
+6. Upload via MediaWiki API with Bearer token
+7. Results page with success/failure + direct Commons links
 ```
 
 ---
 
 ## 🔒 Security & Privacy
 
-- **No password storage** — OAuth 2.0 tokens are stored in server-side sessions only
-- **No permanent file storage** — images pass through in-memory during upload, never written to disk
+- **No password storage** — OAuth 2.0 tokens stored in server-side sessions only
+- **No permanent file storage** — images pass through in-memory, never written to disk
+- **Minimal Google permissions** — only Drive access (no Photos library access)
+- **Shared album privacy** — user controls exactly which album is shared
 - **Session expiry** — sessions expire after 1 hour
 - **Wikimedia Cloud Services compliant** — follows all ToU requirements
 - See [Privacy Policy](/privacy) and [Terms of Use](/terms) in the running app
@@ -215,8 +253,6 @@ Contributions, bug reports, and feature requests are welcome!
 3. **Commit** your changes: `git commit -m 'feat: add my feature'`
 4. **Push** to the branch: `git push origin feature/my-feature`
 5. **Open** a Pull Request
-
-Please follow the existing code style and add tests where applicable.
 
 ---
 
