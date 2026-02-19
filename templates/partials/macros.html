@@ -1,0 +1,55 @@
+{# partials/macros.html — reusable UI component macros #}
+
+{# ─── Step indicator ─────────────────────────────────────── #}
+{% macro steps_bar(current) %}
+{% set all_steps = [
+  (1, 'Google Login'),
+  (2, 'Wiki Login'),
+  (3, 'Pick Source'),
+  (4, 'Gallery'),
+  (5, 'Metadata'),
+  (6, 'Done')
+] %}
+<nav class="steps" aria-label="Progress">
+  {% for num, label in all_steps %}
+    <div class="step {% if num == current %}active{% elif num < current %}done{% endif %}">
+      <div class="step-num">
+        {% if num < current %}✓
+        {% else %}{{ num }}
+        {% endif %}
+      </div>
+      <div class="step-label">{{ label }}</div>
+    </div>
+    {% if not loop.last %}<div class="step-line"></div>{% endif %}
+  {% endfor %}
+</nav>
+{% endmacro %}
+
+{# ─── Flash messages ─────────────────────────────────────── #}
+{% macro flash_messages() %}
+{% with msgs = get_flashed_messages(with_categories=true) %}
+{% if msgs %}
+<div class="flashes">
+  {% for category, message in msgs %}
+  <div class="flash flash-{{ category }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+{% endmacro %}
+
+{# ─── Page heading block ──────────────────────────────────── #}
+{% macro page_heading(title, subtitle='') %}
+<div class="mb-6">
+  <h1 class="page-title">{{ title }}</h1>
+  {% if subtitle %}<p class="page-subtitle">{{ subtitle }}</p>{% endif %}
+</div>
+{% endmacro %}
+
+{# ─── Auth status badge ───────────────────────────────────── #}
+{% macro auth_badge(label, connected, icon='') %}
+<div class="badge {% if connected %}connected{% endif %}">
+  <span class="dot"></span>
+  {{ icon }}{{ label }}: {{ 'Connected' if connected else 'Not connected' }}
+</div>
+{% endmacro %}

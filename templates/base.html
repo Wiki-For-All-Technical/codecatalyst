@@ -1,26 +1,120 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G2COMMONS</title>
+    <meta name="description"
+        content="G2Commons — Upload photos from Google Drive & Google Photos to Wikimedia Commons.">
+    <title>{% block title %}G2Commons{% endblock %} · G2Commons</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block head %}{% endblock %}
+
+    {# Apply saved theme before page paints — prevents flash #}
+    <script>
+        (function () {
+            const saved = localStorage.getItem('g2c-theme');
+            if (saved) document.documentElement.setAttribute('data-theme', saved);
+        })();
+    </script>
 </head>
+
 <body>
-    <header>
-        <h1>📸 G2COMMONS</h1>
-    </header>
-    <main>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flashes">
-                {% for category, message in messages %}
-                    <div class="flash-{{ category }}">{{ message }}</div>
-                {% endfor %}
-                </div>
+
+    {# ─── Header ─────────────────────────────────────────────── #}
+    <header class="site-header">
+        <a href="{{ url_for('main.index') }}" class="site-logo">
+            <div class="logo-icon">📸</div>
+            G2<span>Commons</span>
+        </a>
+
+        <nav style="display:flex;align-items:center;gap:10px;">
+            <a href="{{ url_for('main.about') }}" class="nav-logout" style="opacity:0.7">About</a>
+
+            {# Auth badges #}
+            {% if session.get('credentials') %}
+            <div class="badge connected"><span class="dot"></span>Google</div>
             {% endif %}
-        {% endwith %}
-        {% block content %}{% endblock %}
+            {% if session.get('wiki_access_token') %}
+            <div class="badge connected"><span class="dot"></span>
+                Wikimedia{% if session.get('wiki_username') %}: {{ session['wiki_username'] }}{% endif %}
+            </div>
+            {% endif %}
+            {% if session.get('credentials') or session.get('wiki_access_token') %}
+            <a href="{{ url_for('main.logout') }}" class="nav-logout">Logout</a>
+            {% endif %}
+
+            {# ── Dark / Light toggle ── #}
+            <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle theme"
+                title="Toggle dark/light mode">
+                <span class="toggle-icon">
+                    <span class="icon-sun">☀️</span>
+                    <span class="icon-moon">🌙</span>
+                </span>
+                <span id="theme-label">Light</span>
+            </button>
+        </nav>
+    </header>
+
+    {# ─── Main ───────────────────────────────────────────────── #}
+    <main>
+        <div class="page-wrapper">
+            {# Flash messages component #}
+            {% from 'partials/macros.html' import flash_messages %}
+            {{ flash_messages() }}
+
+            {% block content %}{% endblock %}
+        </div>
     </main>
+
+    {# ─── Global Footer ──────────────────────────────────────── #}
+    <footer class="global-footer">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <a href="{{ url_for('main.index') }}" class="footer-logo">
+                    📸 G2Commons
+                </a>
+                <p>Upload images from Google Drive & Photos directly to Wikimedia Commons. Free, open-source and built
+                    for the Wikimedia community.</p>
+            </div>
+            <nav class="footer-nav">
+                <a href="{{ url_for('main.index') }}">Home</a>
+                <a href="{{ url_for('main.about') }}">About</a>
+                <a href="{{ url_for('main.privacy') }}">Privacy Policy</a>
+                <a href="{{ url_for('main.terms') }}">Terms of Use</a>
+                <a href="https://github.com/Wiki-For-All-Technical" target="_blank" rel="noopener">GitHub ↗</a>
+            </nav>
+        </div>
+        <div class="footer-bottom">
+            <span>© 2026 G2Commons — Wikimedia Cloud Services</span>
+            <span>Built with ❤️ for the free knowledge movement</span>
+        </div>
+    </footer>
+
+    {# ─── Theme script ────────────────────────────────────────── #}
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme') || 'dark';
+            const next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('g2c-theme', next);
+            updateToggleLabel(next);
+        }
+
+        function updateToggleLabel(theme) {
+            const label = document.getElementById('theme-label');
+            if (label) label.textContent = theme === 'dark' ? 'Light' : 'Dark';
+        }
+
+        // Set label on load
+        (function () {
+            const t = localStorage.getItem('g2c-theme') || 'dark';
+            updateToggleLabel(t);
+        })();
+    </script>
+
+    {% block scripts %}{% endblock %}
 </body>
+
 </html>

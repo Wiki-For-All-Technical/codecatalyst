@@ -1,13 +1,39 @@
 {% extends "base.html" %}
+{% block title %}Choose Source{% endblock %}
 
 {% block content %}
-<h2>Select Source</h2>
-<form method="POST" action="{{ url_for('gallery.fetch_images') }}">
-    <select name="domain">
-        <option value="photos">Google Photos</option>
-        <option value="drive">Google Drive</option>
-    </select>
-    <button type="submit">Fetch Images</button>
-</form>
-{% endblock %}
+{% from 'partials/macros.html' import steps_bar, page_heading %}
+{{ steps_bar(3) }}
 
+<div class="card" style="max-width:560px;margin:0 auto;">
+    {{ page_heading('Pick Your Source', 'Where should we fetch your photos from?') }}
+
+    <form method="POST" action="{{ url_for('gallery.fetch_images') }}">
+        <div class="source-grid">
+
+            <label class="source-card">
+                <input type="radio" name="domain" value="photos" checked>
+                <div class="source-card-inner">
+                    <div class="source-icon">🖼️</div>
+                    <div class="source-title">Google Photos</div>
+                    <div class="source-desc">Your personal photo library</div>
+                </div>
+            </label>
+
+            <label class="source-card">
+                <input type="radio" name="domain" value="drive">
+                <div class="source-card-inner">
+                    <div class="source-icon">📁</div>
+                    <div class="source-title">Google Drive</div>
+                    <div class="source-desc">Image files from your Drive</div>
+                </div>
+            </label>
+
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full btn-lg">
+            Fetch Images →
+        </button>
+    </form>
+</div>
+{% endblock %}

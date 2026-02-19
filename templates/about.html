@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}About{% endblock %}
+
+{% block content %}
+<div class="about-hero fade-in">
+    <div class="about-hero-icon">🌐</div>
+    <h1 class="page-title">About G2Commons</h1>
+    <p class="page-subtitle" style="max-width:600px;margin:0 auto;">
+        G2Commons is a free, open-source web tool that makes it easy to upload media from
+        Google Drive and Google Photos directly to <a href="https://commons.wikimedia.org" target="_blank">Wikimedia
+            Commons</a> —
+        the world's largest free media repository.
+    </p>
+</div>
+
+{# ── Mission ── #}
+<div class="card fade-in" style="max-width:680px;margin:0 auto 32px;text-align:left;">
+    <h2 style="margin-bottom:16px;">🎯 Mission</h2>
+    <p>The free knowledge movement depends on freely licensed media. G2Commons lowers the barrier for contributors who
+        already have images in Google services to share them with the world through Wikimedia Commons, under open
+        Creative Commons licenses.</p>
+    <br>
+    <p>This project is hosted on <strong>Wikimedia Cloud Services</strong> and follows all Wikimedia Foundation
+        guidelines and policies.</p>
+</div>
+
+{# ── Feature grid ── #}
+<div class="about-grid">
+    <div class="about-card">
+        <div class="about-card-icon">🔐</div>
+        <div class="about-card-title">Secure OAuth 2.0</div>
+        <div class="about-card-desc">Uses official Google and Wikimedia OAuth 2.0 flows. We never store your passwords.
+        </div>
+    </div>
+    <div class="about-card">
+        <div class="about-card-icon">🖼️</div>
+        <div class="about-card-title">Google Photos & Drive</div>
+        <div class="about-card-desc">Browse your personal library or Drive storage and select images to publish.</div>
+    </div>
+    <div class="about-card">
+        <div class="about-card-icon">📤</div>
+        <div class="about-card-title">Wikimedia Commons Upload</div>
+        <div class="about-card-desc">Directly uploads files with structured wikitext, description, and categories.</div>
+    </div>
+    <div class="about-card">
+        <div class="about-card-icon">🏷️</div>
+        <div class="about-card-title">Metadata Support</div>
+        <div class="about-card-desc">Add title, description, and Categories for each image before uploading.</div>
+    </div>
+    <div class="about-card">
+        <div class="about-card-icon">📦</div>
+        <div class="about-card-title">Batch Uploads</div>
+        <div class="about-card-desc">Select multiple images and upload them all in one go.</div>
+    </div>
+    <div class="about-card">
+        <div class="about-card-icon">🆓</div>
+        <div class="about-card-title">Completely Free</div>
+        <div class="about-card-desc">100% free to use. No accounts, no subscriptions — just contribute.</div>
+    </div>
+</div>
+
+{# ── Tech Stack ── #}
+<div class="card fade-in" style="max-width:680px;margin:0 auto 32px;text-align:left;">
+    <h2 style="margin-bottom:16px;">⚙️ Technology Stack</h2>
+    <p class="text-muted" style="margin-bottom:16px;">G2Commons is built with modern, open-source technologies:</p>
+    <div class="about-tech-stack">
+        <span class="tech-badge">Python 3.14</span>
+        <span class="tech-badge">Flask 3</span>
+        <span class="tech-badge">Authlib (OAuth 2.0)</span>
+        <span class="tech-badge">Google Photos API</span>
+        <span class="tech-badge">Google Drive API</span>
+        <span class="tech-badge">MediaWiki API</span>
+        <span class="tech-badge">Flask-Session</span>
+        <span class="tech-badge">Vanilla CSS</span>
+    </div>
+</div>
+
+{# ── Contribute ── #}
+<div class="card fade-in" style="max-width:680px;margin:0 auto 32px;text-align:left;">
+    <h2 style="margin-bottom:16px;">🤝 Contributing</h2>
+    <p>G2Commons is developed and maintained by the <strong>Wiki For All Technical</strong> team. Contributions, bug
+        reports, and feature requests are welcome on GitHub.</p>
+    <br>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <a href="https://github.com/Wiki-For-All-Technical" target="_blank" class="btn btn-secondary">
+            🔗 View on GitHub
+        </a>
+        <a href="{{ url_for('main.privacy') }}" class="btn btn-secondary">
+            🔒 Privacy Policy
+        </a>
+        <a href="{{ url_for('main.terms') }}" class="btn btn-secondary">
+            📋 Terms of Use
+        </a>
+    </div>
+</div>
+
+<div class="text-center mb-6">
+    <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg">← Back to Home</a>
+</div>
+{% endblock %}

@@ -1,36 +1,42 @@
 import os
 
 class Config:
-    SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "dev")
+    SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "dev-change-me")
 
-    # Flask-Session
-    SESSION_TYPE = 'filesystem'
+    # Flask-Session (filesystem backend)
+    SESSION_TYPE = "filesystem"
     SESSION_PERMANENT = True
-    PERMANENT_SESSION_LIFETIME = 3600  # 1 hour in seconds
+    PERMANENT_SESSION_LIFETIME = 3600  # 1 hour
     SESSION_FILE_DIR = os.path.join(os.getcwd(), ".flask_sessions")
 
-    # Google
-    GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+    # ── Google OAuth 2.0 ─────────────────────────────────────────────────────
+    GOOGLE_CLIENT_ID     = os.getenv("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-    GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
-
-    # Wikimedia
-    WIKI_CONSUMER_KEY = os.getenv("WIKI_CONSUMER_KEY")
-    WIKI_CONSUMER_SECRET = os.getenv("WIKI_CONSUMER_SECRET")
-    WIKI_CALLBACK_URL = os.getenv("WIKI_CALLBACK_URL", "http://localhost:5000/oauth_callback")
-    WIKI_ACCESS_TOKEN = os.getenv("WIKI_ACCESS_TOKEN")
-    WIKI_ACCESS_SECRET = os.getenv("WIKI_ACCESS_SECRET")
-
-    # API endpoints
-    WIKI_INITIATE = "https://commons.wikimedia.org/w/index.php?title=Special:OAuth/initiate&format=json"
-    WIKI_AUTHORIZE = "https://commons.wikimedia.org/w/index.php?title=Special:OAuth/authorize"
-    WIKI_TOKEN = "https://commons.wikimedia.org/w/index.php?title=Special:OAuth/token&format=json"
-    WIKI_API = "https://commons.wikimedia.org/w/api.php"
+    GOOGLE_REDIRECT_URI  = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:5000/oauth2callback")
 
     GOOGLE_SCOPES = [
         "openid",
         "https://www.googleapis.com/auth/userinfo.email",
         "https://www.googleapis.com/auth/userinfo.profile",
         "https://www.googleapis.com/auth/drive",
-        "https://www.googleapis.com/auth/photoslibrary.readonly"
+        "https://www.googleapis.com/auth/photoslibrary.readonly",
     ]
+
+    # ── Wikimedia OAuth 2.0 ──────────────────────────────────────────────────
+    # Register at: https://meta.wikimedia.org/wiki/Special:OAuthConsumerRegistration
+    # Select "OAuth 2.0" when registering your consumer.
+    WIKI_CLIENT_ID       = os.getenv("WIKI_CLIENT_ID")
+    WIKI_CLIENT_SECRET   = os.getenv("WIKI_CLIENT_SECRET")
+    WIKI_REDIRECT_URI    = os.getenv("WIKI_REDIRECT_URI", "http://localhost:5000/wiki_callback")
+
+    # Wikimedia OAuth 2.0 endpoints (hosted on meta.wikimedia.org)
+    WIKI_AUTHORIZE_URL   = "https://meta.wikimedia.org/w/rest.php/oauth2/authorize"
+    WIKI_TOKEN_URL       = "https://meta.wikimedia.org/w/rest.php/oauth2/access_token"
+    WIKI_USERINFO_URL    = "https://meta.wikimedia.org/w/rest.php/oauth2/resource/profile"
+
+    # Commons API for uploads
+    WIKI_API             = "https://commons.wikimedia.org/w/api.php"
+
+    # Wikimedia OAuth 2.0 scopes
+    # basic: read username; uploadfile: upload to Commons; editpage: write wikitext
+    WIKI_SCOPES          = "basic uploadfile editpage"

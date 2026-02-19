@@ -1,10 +1,122 @@
 {% extends "base.html" %}
+{% block title %}Home{% endblock %}
 
 {% block content %}
-<h2>Welcome to G2COMMONS</h2>
-<p>A tool to upload from Google Photos / Drive → WikiCommons</p>
+<div class="hero fade-in">
+    <div class="hero-badge">🚀 Open-source · Free · Wikimedia Commons</div>
 
-<a href="{{ url_for('main.google_login') }}" class="center-link">
-    <button>Login with Google</button>
-</a>
+    <h1 class="hero-title">
+        Upload photos to<br>
+        <span class="grad">Wikimedia Commons</span>
+    </h1>
+
+    <p class="hero-sub">
+        Seamlessly move images from your Google Drive or Google Photos directly
+        to Wikipedia's media library in a few clicks.
+    </p>
+
+    <div class="hero-actions">
+        {% if google_logged_in and wiki_logged_in %}
+        <div class="flex-center" style="flex-direction: column;">
+            <p class="text-muted mb-4">You are connected as <strong>{{ wiki_username or 'Wikimedia User' }}</strong></p>
+            <a href="{{ url_for('gallery.select_domain') }}" class="btn btn-primary btn-lg">
+                📂 Start Fetching & Uploading
+            </a>
+        </div>
+        {% else %}
+        <div class="card terms-notice-card fade-in">
+            <h4 class="mb-4">Data Collection / Terms of Use</h4>
+            <p>By using this project, you agree that any private information you give to this project may be made
+                publicly available and not be treated as confidential.</p>
+            <p>By using this project, you agree that the volunteer administrators of this project will have access to
+                any data you submit. This can include your IP address, your username for accounts created in Cloud
+                Services services, and any other information that you send.</p>
+            <p><small>Read the full <a href="{{ url_for('main.terms') }}">Terms of Use</a> and <a
+                        href="{{ url_for('main.privacy') }}">Privacy Policy</a>.</small></p>
+        </div>
+
+        <div class="privacy-check-container">
+            <input type="checkbox" id="privacy-check" onchange="toggleLoginBtn()">
+            <label for="privacy-check">I've read and accept the <a href="{{ url_for('main.privacy') }}"
+                    target="_blank">Privacy Policy</a></label>
+        </div>
+
+        <div id="login-actions" style="opacity: 0.5; pointer-events: none; transition: var(--transition);">
+            {% if google_logged_in %}
+            <a href="{{ url_for('upload.wiki_prompt') }}" class="btn btn-primary btn-lg">
+                🌐 Connect Wikimedia Commons
+            </a>
+            {% else %}
+            <a href="{{ url_for('main.google_login') }}" class="btn btn-google btn-lg">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"
+                    alt="Google">
+                Continue with Google
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- How it Works Section (from image) -->
+    <div class="how-it-works fade-in">
+        <div class="how-step">
+            <div class="step-icon-box">🔑</div>
+            <div class="step-badge">1</div>
+            <div class="step-text">Login to Wikimedia Commons</div>
+        </div>
+        <div class="how-step">
+            <div class="step-icon-box">🖼️</div>
+            <div class="step-badge">2</div>
+            <div class="step-text">Pick photos from your Google Drive / Photos</div>
+        </div>
+        <div class="how-step">
+            <div class="step-icon-box">📤</div>
+            <div class="step-badge">3</div>
+            <div class="step-text">Upload to Wikimedia Commons</div>
+        </div>
+    </div>
+
+    <div class="hero-features">
+        <div class="feature-card">
+            <div class="feature-icon">✨</div>
+            <div class="feature-title">Fast & Easy</div>
+            <div class="feature-desc">Upload multiple images at once with a streamlined interface.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🛡️</div>
+            <div class="feature-title">Secure</div>
+            <div class="feature-desc">Uses official Google and Wikimedia OAuth 2.0 for safe access.</div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🆓</div>
+            <div class="feature-title">Free Software</div>
+            <div class="feature-desc">Open-source tool built for the Wikimedia community.</div>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-links">
+            <a href="{{ url_for('main.privacy') }}">Privacy Policy</a>
+            <a href="{{ url_for('main.terms') }}">Terms of Use</a>
+            <a href="https://github.com/Wiki-For-All-Technical" target="_blank">GitHub</a>
+        </div>
+        <p class="text-muted mt-4" style="font-size: 0.75rem;">© 2026 G2Commons. Built for Wikimedia Cloud Services.</p>
+    </footer>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleLoginBtn() {
+        const isChecked = document.getElementById('privacy-check').checked;
+        const actions = document.getElementById('login-actions');
+        if (isChecked) {
+            actions.style.opacity = "1";
+            actions.style.pointerEvents = "auto";
+        } else {
+            actions.style.opacity = "0.5";
+            actions.style.pointerEvents = "none";
+        }
+    }
+</script>
 {% endblock %}

@@ -1,36 +1,109 @@
 {% extends "base.html" %}
+{% block title %}Add Metadata{% endblock %}
 
 {% block content %}
-<h2>Add Metadata</h2>
-<form method="POST" action="{{ url_for('upload.save_metadata') }}">
-    {% for img in images %}
+{% from 'partials/macros.html' import steps_bar, page_heading %}
+{{ steps_bar(5) }}
+
+{{ page_heading('Add File Information',
+'Fill in the title, description, and optional categories for each image before uploading to Wikimedia Commons.') }}
+
+<form method="POST" action="{{ url_for('upload.save_metadata') }}" id="metadata-form">
+
+    {% if images|length > 1 %}
+    <div class="card card-sm mb-6">
+        <p class="text-muted" style="margin:0;">
+            <strong style="color:var(--accent-lt);">Tip:</strong>
+            Fill in the first image's fields and use "Apply to All" to copy to all images.
+        </p>
+    </div>
+    {% endif %}
+
+    <div class="metadata-grid">
+        {% for img in images %}
         <input type="hidden" name="image_url" value="{{ img }}">
+
         <div class="metadata-item">
-            <img src="{{ img }}" alt="Image">
-            <div class="input-group">
-                <input type="text" name="title" placeholder="Title" id="title_{{ loop.index }}" required>
-                {% if loop.first and images|length > 1 %}
-                    <button type="button" class="apply-all-btn" onclick="applyToAll('title')">Apply to All</button>
-                {% endif %}
-            </div>
-            <div class="input-group">
-                <input type="text" name="description" placeholder="Description" id="desc_{{ loop.index }}" required>
-                {% if loop.first and images|length > 1 %}
-                    <button type="button" class="apply-all-btn" onclick="applyToAll('desc')">Apply to All</button>
-                {% endif %}
+            <img src="{{ img }}" class="metadata-thumb" alt="Image {{ loop.index }}" loading="lazy">
+
+            <div class="metadata-fields">
+
+                {# Title row #}
+                <div class="field-row">
+                    <div class="form-group">
+                        <label for="title_{{ loop.index }}">Title *</label>
+                        <input type="text" name="title" id="title_{{ loop.index }}"
+                            placeholder="e.g. Sunset over the valley" required>
+                    </div>
+                    {% if loop.first and images|length > 1 %}
+                    <button type="button" class="btn btn-sm btn-secondary btn-apply"
+                        onclick="applyToAll('title', 'title_1')">Apply to All</button>
+                    {% endif %}
+                </div>
+
+                {# Description row #}
+                <div class="field-row">
+                    <div class="form-group">
+                        <label for="desc_{{ loop.index }}">Description *</label>
+                        <textarea name="description" id="desc_{{ loop.index }}"
+                            placeholder="Describe the image in detail…" rows="2" required></textarea>
+                    </div>
+                    {% if loop.first and images|length > 1 %}
+                    <button type="button" class="btn btn-sm btn-secondary btn-apply"
+                        onclick="applyToAll('desc', 'desc_1', true)">Apply to All</button>
+                    {% endif %}
+                </div>
+
+                {# Categories row #}
+                <div class="field-row">
+                    <div class="form-group">
+                        <label for="cats_{{ loop.index }}">Wikimedia Categories
+                            <span class="text-muted">(comma-separated, optional)</span></label>
+                        <input type="text" name="categories" id="cats_{{ loop.index }}"
+                            placeholder="e.g. Landscapes, India, 2024">
+                    </div>
+                    {% if loop.first and images|length > 1 %}
+                    <button type="button" class="btn btn-sm btn-secondary btn-apply"
+                        onclick="applyToAll('cats', 'cats_1')">Apply to All</button>
+                    {% endif %}
+                </div>
+
             </div>
         </div>
-    {% endfor %}
-    <button type="submit">Upload</button>
+        {% endfor %}
+    </div>
+
+    <div class="flex-center mt-8">
+        <a href="{{ url_for('gallery.display_gallery') }}" class="btn btn-secondary">← Back to Gallery</a>
+        <button type="submit" class="btn btn-success btn-lg" onclick="showLoader()">
+            🚀 Upload to Wikimedia Commons
+        </button>
+    </div>
+
 </form>
 
+{# Loading overlay #}
+<div class="upload-loading" id="upload-loader">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Uploading to Wikimedia Commons…</div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
 <script>
-function applyToAll(type) {
-    const firstValue = document.getElementById(type + '_1').value;
-    const inputs = document.querySelectorAll('input[name^="' + type + '_"]');
-    inputs.forEach(input => {
-        input.value = firstValue;
-    });
-}
+    function applyToAll(type, sourceId, isTextarea = false) {
+        const source = document.getElementById(sourceId);
+        const value = isTextarea ? source.value : source.value;
+        const name = isTextarea ? 'description' : (type === 'cats' ? 'categories' : 'title');
+        document.querySelectorAll(`[name="${name}"]`).forEach(el => { el.value = value; });
+    }
+
+    function showLoader() {
+        // Only show if form is valid
+        if (document.getElementById('metadata-form').checkValidity()) {
+            document.getElementById('upload-loader').classList.add('active');
+        }
+    }
 </script>
 {% endblock %}

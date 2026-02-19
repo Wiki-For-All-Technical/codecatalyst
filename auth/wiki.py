@@ -1,154 +1,84 @@
-from flask import session, request, redirect, url_for
-from requests_oauthlib import OAuth1Session
-from config import Config
+"""
+auth/wiki.py
+
+Wikimedia OAuth 2.0 authentication using Authlib.
+
+Flow:
+  1. /upload/wiki_authenticate  → wiki.start_login()   → redirect to Wikimedia
+  2. /wiki_callback             → wiki.finish_login()   → exchange code → store token
+"""
+
 import logging
-import os
-import json
+from flask import session, redirect, url_for, current_app, request, flash
+from app import oauth
 
-USER_AGENT = "WikimediaUploader/1.0 (https://your-app-url.com; your-email@example.com)"
+logger = logging.getLogger(__name__)
 
-def _get_wiki_session(**kwargs):
-    """Creates and configures an OAuth1Session for the Wikimedia API."""
-    if not Config.WIKI_CONSUMER_KEY or not Config.WIKI_CONSUMER_SECRET:
-        raise ValueError("WIKI_CONSUMER_KEY and WIKI_CONSUMER_SECRET must be set in environment variables.")
+# ── Token storage helpers ────────────────────────────────────────────────────
 
-    session_params = {
-        'client_key': Config.WIKI_CONSUMER_KEY,
-        'client_secret': Config.WIKI_CONSUMER_SECRET,
-    }
-    session_params.update(kwargs)
+def _store_token(token: dict):
+    """Persist the OAuth 2.0 token dict in the session."""
+    session["wiki_token"] = token
+    # Keep a flat access_token string for easy access
+    session["wiki_access_token"] = token.get("access_token")
+    session.modified = True
 
-    oauth = OAuth1Session(**session_params)
-    oauth.headers.update({"User-Agent": USER_AGENT})
-    return oauth
+
+def get_token() -> dict | None:
+    """Retrieve the stored OAuth 2.0 token dict, or None."""
+    return session.get("wiki_token")
+
+
+def get_access_token() -> str | None:
+    """Return just the access_token string, or None."""
+    return session.get("wiki_access_token")
+
+
+def is_authenticated() -> bool:
+    return bool(get_access_token())
+
+
+# ── OAuth flow ───────────────────────────────────────────────────────────────
 
 def start_login():
-    """Initialize Wikimedia OAuth 1.0a login flow - redirects to official Wikimedia login page"""
-    try:
-        callback_url = Config.WIKI_CALLBACK_URL
-        consumer_key = Config.WIKI_CONSUMER_KEY
-        
-        logging.warning(f"=== WIKIMEDIA OAUTH DETAILS ===")
-        logging.warning(f"Callback URL: {callback_url}")
-        logging.warning(f"Consumer Key: {consumer_key}")
-        logging.warning(f"OAuth Initiate URL: {Config.WIKI_INITIATE}")
-        logging.warning(f"================================")
+    """
+    Build the Wikimedia authorisation URL and redirect the user there.
+    Authlib stores the PKCE state/nonce automatically in the session.
+    """
+    redirect_uri = current_app.config["WIKI_REDIRECT_URI"]
+    logger.info("Starting Wikimedia OAuth 2.0 login, redirect_uri=%s", redirect_uri)
+    return oauth.wikimedia.authorize_redirect(redirect_uri)
 
-        # Create OAuth1Session
-        oauth = _get_wiki_session(callback_uri=callback_url)
-
-        # Manually fetch request token because Wikimedia returns non-standard JSON
-        response = oauth.post(Config.WIKI_INITIATE)
-        response.raise_for_status()
-        
-        token_data = response.json()
-        if 'key' not in token_data or 'secret' not in token_data:
-            raise ValueError(f"Invalid request token response from Wikimedia: {token_data}")
-
-        request_token = {
-            'oauth_token': token_data['key'],
-            'oauth_token_secret': token_data['secret']
-        }
-        
-        # Store request token in session
-        session["wiki_request_token"] = request_token
-        session.modified = True
-        logging.info("Stored request token in session")
-        
-        # Manually construct the authorization URL.
-        # The `oauth.authorization_url` method can't be used here because it doesn't know
-        # about the token we fetched manually from the JSON response.
-        from urllib.parse import urlencode
-        auth_url = f"{Config.WIKI_AUTHORIZE}&{urlencode({'oauth_token': request_token['oauth_token']})}"
-        logging.info(f"Redirecting to authorization page: {auth_url}")
-        
-        return redirect(auth_url)
-        
-    except Exception as e:
-        err_text = str(e)
-        logging.error(f"Wikimedia OAuth Error: {err_text}")
-        print(f"\n=== WIKIMEDIA ERROR ===")
-        print(f"Error: {err_text}")
-        print(f"======================\n")
-        
-        if "signature" in err_text.lower() or "invalid" in err_text.lower():
-            return (
-                "<b>Wikimedia Login Error: Invalid Signature</b><br><br>"
-                "Your consumer key or secret may be incorrect. Please verify them on Special:OAuthConsumerRegistration.<br><br>"
-                f"Error: {err_text}"
-            ), 500
-        
-        return (f"<b>Wikimedia Login Error:</b> {err_text}<br><br>" 
-                "Please check your consumer settings on Special:OAuthConsumerRegistration and try again."), 500
 
 def finish_login():
-    """Complete Wikimedia OAuth 1.0a login"""
+    """
+    Handle the OAuth 2.0 callback:
+      - Exchange the authorisation code for tokens
+      - Store the token in the session
+      - Redirect to the wiki success page
+    """
     try:
-        request_token = session.get("wiki_request_token")
-        if not request_token:
-            logging.error("No request token found in session")
-            return redirect(url_for("upload.wiki_login"))
+        redirect_uri = current_app.config["WIKI_REDIRECT_URI"]
+        token = oauth.wikimedia.authorize_access_token(redirect_uri=redirect_uri)
+        logger.info("Wikimedia OAuth 2.0 token obtained successfully")
+        _store_token(token)
 
-        oauth_verifier = request.args.get("oauth_verifier")
-        if not oauth_verifier:
-            logging.error("No oauth_verifier in callback")
-            return redirect(url_for("upload.wiki_login"))
+        # Optionally fetch the user profile and store the username
+        try:
+            userinfo_url = current_app.config.get("WIKI_USERINFO_URL")
+            if userinfo_url:
+                resp = oauth.wikimedia.get(userinfo_url, token=token)
+                resp.raise_for_status()
+                profile = resp.json()
+                session["wiki_username"] = profile.get("username") or profile.get("name")
+                logger.info("Logged in as Wikimedia user: %s", session.get("wiki_username"))
+        except Exception as exc:
+            logger.warning("Could not fetch Wikimedia user profile: %s", exc)
 
-        # Create OAuth session with request token
-        oauth = _get_wiki_session(
-            resource_owner_key=request_token.get("oauth_token"),
-            resource_owner_secret=request_token.get("oauth_token_secret"),
-            verifier=oauth_verifier,
-        )
-        
-        # Manually fetch access token because Wikimedia returns non-standard JSON
-        response = oauth.post(Config.WIKI_TOKEN)
-        response.raise_for_status()
-
-        token_data = response.json()
-        if 'key' not in token_data or 'secret' not in token_data:
-            raise ValueError(f"Invalid access token response from Wikimedia: {token_data}")
-
-        access_token = {
-            'oauth_token': token_data['key'],
-            'oauth_token_secret': token_data['secret']
-        }
-        
-        # Store access token in session
-        session["wiki_access_token"] = access_token
-        session.modified = True
-        
-        # Always redirect to the success page to show "Login Successful"
-        session.pop("post_wiki_next", None)
         return redirect(url_for("upload.wiki_success"))
-        
-    except Exception as e:
-        err_text = str(e)
-        logging.error(f"Wikimedia OAuth finish_login error: {err_text}")
-        return (f"<b>Wikimedia Login Error:</b> {err_text}<br><br>" 
-                "Please try logging in again."), 500
 
-def direct_login():
-    """Use pre-generated access tokens directly"""
-    try:
-        if not Config.WIKI_ACCESS_TOKEN or not Config.WIKI_ACCESS_SECRET:
-            return (
-                "<b>Wikimedia Login Error:</b> Pre-generated access tokens not found<br><br>"
-                "Please ensure WIKI_ACCESS_TOKEN and WIKI_ACCESS_SECRET are set in your .env file."
-            ), 500
-        
-        # Store pre-generated tokens directly in session
-        session["wiki_access_token"] = {
-            'oauth_token': Config.WIKI_ACCESS_TOKEN,
-            'oauth_token_secret': Config.WIKI_ACCESS_SECRET,
-        }
-        session.modified = True
-        logging.info("Using pre-generated Wikimedia access tokens")
-
-        # Redirect to success page first
-        return redirect(url_for("upload.wiki_success"))
-        
-    except Exception as e:
-        err_text = str(e)
-        logging.error(f"Wikimedia direct_login error: {err_text}")
-        return (f"<b>Wikimedia Login Error:</b> {err_text}"), 500
+    except Exception as exc:
+        err = str(exc)
+        logger.error("Wikimedia OAuth 2.0 callback error: %s", err)
+        flash(f"Wikimedia login failed: {err}", "error")
+        return redirect(url_for("upload.wiki_login"))

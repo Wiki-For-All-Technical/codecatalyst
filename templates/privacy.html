@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy{% endblock %}
+
+{% block content %}
+<div class="card fade-in">
+    <h1 class="page-title">Privacy Policy</h1>
+    <p class="text-muted">Last updated: February 19, 2026</p>
+
+    <div class="mt-6" style="text-align: left;">
+        <h3>Introduction</h3>
+        <p>This Privacy Policy explains how we collect, use, and handle your data when you use G2Commons. We are
+            committed to protecting your privacy and ensuring transparency in our operations.</p>
+
+        <h3>1. Information We Collect</h3>
+        <ul>
+            <li><strong>Media Metadata:</strong> Titles, descriptions, and categories you provide for images.</li>
+            <li><strong>Authentication Data:</strong> OAuth tokens from Google and Wikimedia (stored securely in your
+                session). We do not store your passwords.</li>
+            <li><strong>Usage Logs:</strong> Temporary server logs including IP addresses, timestamps, and request
+                details for debugging and performance monitoring.</li>
+        </ul>
+
+        <h3>2. How We Use Data</h3>
+        <ul>
+            <li>To facilitate the transfer of media from Google services to Wikimedia Commons.</li>
+            <li>To ensure technical stability and prevent abuse of the service.</li>
+            <li>To comply with Wikimedia Cloud Services Terms of Use.</li>
+        </ul>
+
+        <h3>3. Data Storage and Retention</h3>
+        <ul>
+            <li><strong>No Permanent Storage:</strong> We do not store copies of your images on our servers. Images are
+                processed directly from Google to Wikimedia.</li>
+            <li><strong>Session Data:</strong> Authentication tokens are stored in server-side sessions and are cleared
+                when you log out or the session expires.</li>
+            <li><strong>Public Availability:</strong> Once an image is uploaded to Wikimedia Commons, it becomes public
+                under the specified license.</li>
+        </ul>
+
+        <h3>4. Sharing of Information</h3>
+        <p>We do not share your private information with third parties, except for Wikimedia Commons (as part of the
+            upload process) and Google (to fetch your images).</p>
+
+        <h3>5. Third-Party Services</h3>
+        <p>This app interacts with Google Photos API and Wikimedia API. Their respective privacy policies also apply:
+        </p>
+        <ul>
+            <li><a href="https://policies.google.com/privacy" target="_blank">Google Privacy Policy</a></li>
+            <li><a href="https://meta.wikimedia.org/wiki/Privacy_policy" target="_blank">Wikimedia Foundation Privacy
+                    Policy</a></li>
+        </ul>
+
+        <h3>6. Contact</h3>
+        <p>For questions regarding this policy, please contact the maintainers via GitHub.</p>
+    </div>
+
+    <div class="mt-8 text-center">
+        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Back to Home</a>
+    </div>
+</div>
+{% endblock %}

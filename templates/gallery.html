@@ -1,15 +1,129 @@
 {% extends "base.html" %}
+{% block title %}Gallery{% endblock %}
 
 {% block content %}
-<h2>Fetched Images</h2>
-<form method="POST" action="{{ url_for('upload.metadata') }}">
-    {% for img in images %}
-        <div class="image-container">
-            <img src="{{ img }}" loading="lazy" alt="Gallery Image">
-            <br>
-            <input type="checkbox" name="selected_images" value="{{ img }}">
+{% from 'partials/macros.html' import steps_bar, page_heading %}
+{{ steps_bar(4) }}
+
+{{ page_heading('Select Images',
+'Click images to select them, then press "Next" to add metadata before uploading.') }}
+
+<form method="POST" action="{{ url_for('upload.metadata') }}" id="gallery-form">
+
+    <div class="gallery-controls">
+        <div class="selection-status">
+            <strong id="sel-count">0</strong> of {{ images|length }} selected
+            &nbsp;·&nbsp;
+            <button type="button" class="btn btn-sm btn-secondary" onclick="selectAll()">Select All</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="clearAll()">Clear</button>
         </div>
-    {% endfor %}
-    <button type="submit">Next</button>
+        <button type="submit" class="btn btn-primary" id="next-btn" disabled>
+            Next: Add Metadata →
+        </button>
+    </div>
+
+    <div class="gallery-grid" id="gallery-grid">
+        {% for img in images %}
+        <div class="image-card" onclick="toggleCard(this)">
+            <img src="{{ img }}" loading="lazy" alt="Image {{ loop.index }}">
+            <input type="checkbox" name="selected_images" value="{{ img }}" id="img_{{ loop.index }}">
+            <div class="check-overlay">
+                <div class="check-badge">✓</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if next_page_token %}
+    <div class="load-more-bar">
+        <button type="button" class="btn btn-secondary" id="load-more-btn" data-token="{{ next_page_token }}"
+            onclick="loadMore(this)">
+            Load More Images
+        </button>
+    </div>
+    {% endif %}
+
+    <div class="flex-center mt-4">
+        <a href="{{ url_for('gallery.select_domain') }}" class="btn btn-secondary">← Change Source</a>
+        <button type="submit" class="btn btn-primary" id="next-btn-bottom" disabled>
+            Next: Add Metadata →
+        </button>
+    </div>
+
 </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let selectedCount = 0;
+
+    function updateUI() {
+        document.getElementById('sel-count').textContent = selectedCount;
+        const disabled = selectedCount === 0;
+        document.getElementById('next-btn').disabled = disabled;
+        document.getElementById('next-btn-bottom').disabled = disabled;
+    }
+
+    function toggleCard(card) {
+        const cb = card.querySelector('input[type="checkbox"]');
+        cb.checked = !cb.checked;
+        card.classList.toggle('selected', cb.checked);
+        selectedCount += cb.checked ? 1 : -1;
+        updateUI();
+    }
+
+    function selectAll() {
+        document.querySelectorAll('.image-card').forEach(card => {
+            const cb = card.querySelector('input[type="checkbox"]');
+            if (!cb.checked) { cb.checked = true; card.classList.add('selected'); selectedCount++; }
+        });
+        updateUI();
+    }
+
+    function clearAll() {
+        document.querySelectorAll('.image-card').forEach(card => {
+            const cb = card.querySelector('input[type="checkbox"]');
+            cb.checked = false; card.classList.remove('selected');
+        });
+        selectedCount = 0;
+        updateUI();
+    }
+
+    async function loadMore(btn) {
+        const token = btn.dataset.token;
+        if (!token) return;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Loading…';
+
+        try {
+            const resp = await fetch(`{{ url_for('gallery.fetch_images') }}?page_token=${encodeURIComponent(token)}`);
+            const data = await resp.json();
+
+            const grid = document.getElementById('gallery-grid');
+            data.images.forEach((src, i) => {
+                const card = document.createElement('div');
+                card.className = 'image-card fade-in';
+                card.onclick = () => toggleCard(card);
+                card.innerHTML = `
+          <img src="${src}" loading="lazy" alt="Image">
+          <input type="checkbox" name="selected_images" value="${src}">
+          <div class="check-overlay"><div class="check-badge">✓</div></div>
+        `;
+                grid.appendChild(card);
+            });
+
+            if (data.next_page_token) {
+                btn.dataset.token = data.next_page_token;
+                btn.disabled = false;
+                btn.textContent = 'Load More Images';
+            } else {
+                btn.closest('.load-more-bar').remove();
+            }
+        } catch (e) {
+            btn.disabled = false;
+            btn.textContent = 'Retry Load More';
+            console.error(e);
+        }
+    }
+</script>
 {% endblock %}

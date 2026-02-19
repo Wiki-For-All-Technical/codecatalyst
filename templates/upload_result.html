@@ -1,33 +1,52 @@
 {% extends "base.html" %}
+{% block title %}Upload Results{% endblock %}
 
 {% block content %}
-<h2>Upload Results</h2>
-{% set success_count = 0 %}
-{% for r in results %}
-    {% if r.upload and r.upload.result == 'Success' %}
-        {% set success_count = success_count + 1 %}
-    {% endif %}
-{% endfor %}
+{% from 'partials/macros.html' import steps_bar, page_heading %}
+{{ steps_bar(6) }}
 
-{% if success_count > 0 %}
-    <div class="success-message">
-        <h3>Image uploaded successfully!</h3>
-        <p>{{ success_count }} image(s) uploaded to Wikimedia Commons.</p>
+{{ page_heading('Upload Complete', 'Here\'s a summary of your upload results.') }}
+
+{# ── Summary stats ── #}
+<div class="results-summary mb-6">
+    <div class="stat-box total">
+        <span class="stat-num">{{ total }}</span>
+        <span class="stat-label">Total</span>
     </div>
-{% endif %}
+    <div class="stat-box success">
+        <span class="stat-num">{{ success_count }}</span>
+        <span class="stat-label">Uploaded</span>
+    </div>
+    <div class="stat-box error">
+        <span class="stat-num">{{ total - success_count }}</span>
+        <span class="stat-label">Failed</span>
+    </div>
+</div>
 
-<ul>
+{# ── Per-file results ── #}
+<ul class="result-list">
     {% for r in results %}
-        <li>
-            {% if r.upload and r.upload.result == 'Success' %}
-                <span class="success">✓ {{ r.upload.filename }} uploaded successfully</span>
-            {% elif r.error %}
-                <span class="error">✗ {{ r.error }}</span>
-            {% else %}
-                {{ r }}
+    <li class="result-item {{ 'success' if r.success else 'error' }}">
+        <div class="result-icon">{{ '✅' if r.success else '❌' }}</div>
+        <div class="result-detail">
+            <div class="result-filename">{{ r.filename }}</div>
+            {% if r.success %}
+            <div class="result-msg">Uploaded successfully to Wikimedia Commons.</div>
+            {% if r.url %}
+            <a href="{{ r.url }}" target="_blank" rel="noopener" class="result-link">
+                View on Commons →
+            </a>
             {% endif %}
-        </li>
+            {% else %}
+            <div class="result-msg" style="color:var(--error);">{{ r.error }}</div>
+            {% endif %}
+        </div>
+    </li>
     {% endfor %}
 </ul>
-<a href="{{ url_for('main.index') }}">Back to Home</a>
+
+<div class="flex-center mt-8">
+    <a href="{{ url_for('gallery.select_domain') }}" class="btn btn-secondary">Upload More</a>
+    <a href="{{ url_for('main.index') }}" class="btn btn-primary">← Home</a>
+</div>
 {% endblock %}

@@ -1,10 +1,31 @@
 {% extends "base.html" %}
+{% block title %}Wikimedia Login{% endblock %}
 
 {% block content %}
-<h2>Login to Wikimedia Commons</h2>
-<p>To upload to Wikimedia Commons, please authenticate with Wikimedia.</p>
-<form method="POST" action="{{ url_for('upload.wiki_authenticate') }}">
-    <button type="submit" class="btn btn-primary">Login to Wikimedia Commons</button>
-</form>
-<p><small>You will be securely authenticated to access Wikimedia Commons.</small></p>
+{% from 'partials/macros.html' import steps_bar, page_heading %}
+{{ steps_bar(2) }}
+
+<div class="login-card card fade-in">
+    <div class="wiki-logo">🌐</div>
+
+    {{ page_heading('Connect Wikimedia Commons',
+    'To upload files to Wikimedia Commons, you need to authorise this app via OAuth.') }}
+
+    <ul style="color:var(--text-muted);font-size:0.85rem;margin-bottom:24px;padding-left:18px;line-height:2;">
+        <li>You'll be redirected to the official Wikimedia login page</li>
+        <li>Sign in and grant permission to upload on your behalf</li>
+        <li>You'll be returned here automatically</li>
+    </ul>
+
+    <form method="POST" action="{{ url_for('upload.wiki_authenticate') }}">
+        <button type="submit" class="btn btn-primary btn-full btn-lg">
+            🌐 Connect with Wikimedia Commons
+        </button>
+    </form>
+
+    <p class="text-muted text-center mt-4">
+        Your credentials are handled securely via OAuth 1.0a.<br>
+        We never store your Wikimedia password.
+    </p>
+</div>
 {% endblock %}

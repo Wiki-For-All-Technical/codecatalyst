@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Terms of Use{% endblock %}
+
+{% block content %}
+<div class="card fade-in">
+    <h1 class="page-title">Data Collection / Terms of Use</h1>
+
+    <div class="mt-6" style="text-align: left; line-height: 1.8;">
+        <p>By using this project, you agree that any private information you give to this project may be made publicly
+            available and not be treated as confidential.</p>
+
+        <p>By using this project, you agree that the volunteer administrators of this project will have access to any
+            data you submit. This can include your IP address, your username for accounts created in Cloud Services
+            services, and any other information that you send. The volunteer administrators of this project are bound by
+            the Wikimedia Cloud Services Terms of Use, and are not allowed to share this information or use it in any
+            non-approved way.</p>
+
+        <p>Since access to this information is fundamental to the operation of Wikimedia Cloud Services, these terms
+            regarding use of your data expressly override the Wikimedia Foundation's Privacy Policy as it relates to the
+            use and access of your personal information.</p>
+
+        <p>The actual information collected by this application is listed in our <a
+                href="{{ url_for('main.privacy') }}">Privacy Policy</a>.</p>
+    </div>
+
+    <div class="mt-8 text-center">
+        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Back to Home</a>
+    </div>
+</div>
+{% endblock %}
